@@ -18,3 +18,9 @@ const CONFIG = {
     MINS_IN_YEAR: 60 * 24 * 30 * 12,
     FOOTER_HEIGHT: 115         // 下方欄位高度
 };
+
+
+// --- 關鍵修復：將全域變數移至此處，防止 villager.js 找不到 ---
+let villagers = [], environment = [], selectedId = null, matchId = null;
+let totalMinutes = 0, genCounters = {}, deathCount = 0, currentTab = 'All';
+let plagueZone = null, gracePoints = CONFIG.INITIAL_GRACE;
