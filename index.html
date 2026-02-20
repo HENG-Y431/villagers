@@ -2,89 +2,94 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V4.0 - 穩定系統版</title>
+    <title>Underworld V4.01 - 始祖文明穩定版</title>
     <style>
-        body { margin: 0; background: #1a1a1a; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; display: flex; color: #eee; }
+        body { margin: 0; background: #121212; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: #e0e0e0; }
         
-        /* 頂部導覽列 */
-        #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #daa520; color: #00ff00; font-weight: bold; font-size: 0.9em; letter-spacing: 1px; }
+        /* 頂部時間列 */
+        #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #daa520; color: #00ff00; font-weight: bold; font-size: 0.9em; }
 
-        /* 遊戲畫布區 */
-        #game-container { position: relative; flex-grow: 1; height: 100vh; background: #222; }
+        /* 遊戲視窗 */
+        #game-container { position: relative; flex-grow: 1; height: 100vh; background: #1a1a1a; }
         canvas { display: block; }
 
         /* 右側管理面板 */
-        #god-panel { width: 280px; background: #1a1a1a; border-left: 2px solid #333; padding: 12px; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; height: 100vh; }
-        .stat-card { background: #2a2a2a; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #444; font-size: 0.8em; }
+        #god-panel { width: 280px; background: #1e1e1e; border-left: 2px solid #333; padding: 12px; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; }
+        .stat-card { background: #2d2d2d; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #444; font-size: 0.8em; }
         
         h3 { font-size: 0.85em; margin: 5px 0; color: #daa520; border-left: 3px solid #daa520; padding-left: 5px; }
         
-        /* 緊湊按鈕群 */
+        /* 網格按鈕設計 */
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 15px; }
-        button { padding: 6px; cursor: pointer; background: #333; color: #fff; border: 1px solid #555; transition: 0.2s; border-radius: 4px; font-weight: bold; font-size: 0.75em; }
-        button:hover { background: #daa520; color: #000; border-color: #fff; }
+        button { padding: 6px 2px; cursor: pointer; background: #3d3d3d; color: white; border: 1px solid #555; transition: 0.2s; border-radius: 4px; font-weight: bold; font-size: 0.75em; }
+        button:hover { background: #daa520; color: #000; }
         button.disaster { color: #ff6b6b; border-color: #633; }
-        button.disaster:hover { background: #633; color: #fff; }
 
-        /* 固定在右側下方的村民面板 */
-        #status-window { margin-top: auto; background: #000; border: 1px solid #daa520; padding: 12px; display: none; border-radius: 8px; font-size: 0.85em; }
-        .family-line { font-size: 0.75em; color: #888; margin: 4px 0; border-bottom: 1px solid #333; padding-bottom: 4px; }
-        .attr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.75em; color: #bbb; margin-top: 5px; }
+        /* 固定在右下角的村民面板 */
+        #status-window { margin-top: auto; background: #000; border: 1px solid #daa520; padding: 12px; display: none; border-radius: 8px; font-size: 0.85em; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
+        .family-info { font-size: 0.75em; color: #888; margin: 4px 0; border-bottom: 1px solid #333; padding-bottom: 4px; }
+        .attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.7em; color: #aaa; margin-top: 5px; }
         
-        /* 狀態條 */
-        .bar-wrap { margin-top: 6px; }
-        .label { font-size: 0.7em; color: #999; display: flex; justify-content: space-between; }
-        .bar { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; }
-        .bar-fill { height: 100%; width: 0%; transition: width 0.3s ease-out; }
+        /* 進度條樣式 */
+        .bar-wrap { margin-top: 5px; }
+        .bar-label { font-size: 0.7em; color: #999; display: flex; justify-content: space-between; }
+        .bar { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; border: 1px solid #333; }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body>
 
-<div id="top-bar">SYSTEM TIME: <span id="world-time">00:00</span></div>
+<div id="top-bar">世界曆法：<span id="world-time">08:00</span></div>
 
 <div id="game-container">
     <canvas id="worldCanvas"></canvas>
 </div>
 
 <div id="god-panel">
-    <h3>世界概況</h3>
+    <h3>文明狀態</h3>
     <div class="stat-card">
-        人口總數: <span id="pop-count">0</span><br>
-        文明資源: <span id="res-count">100</span>
+        人口：<span id="pop-count">0</span><br>
+        資源：<span id="res-count">100</span>
     </div>
     
-    <h3>管理權限 (God)</h3>
+    <h3>神蹟 (Miracles)</h3>
     <div class="btn-grid">
-        <button onclick="miracle('food')">投放聖餐</button>
-        <button onclick="miracle('energy')">賦予精神</button>
+        <button onclick="castMiracle('food')">投放聖餐</button>
+        <button onclick="castMiracle('energy')">賦予精神</button>
     </div>
 
-    <h3>災禍降臨 (Disaster)</h3>
+    <h3>災厄 (Calamity)</h3>
     <div class="btn-grid">
-        <button class="disaster" onclick="calamity('disease')">傳染疾病</button>
-        <button onclick="resetWorld()" style="color:#aaa;">重啟世界</button>
+        <button class="disaster" onclick="castCalamity('disease')">傳染疫病</button>
+        <button onclick="resetWorld()" style="color:#aaa; font-size: 0.7em;">重啟世界</button>
     </div>
 
     <div id="status-window">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong id="v-name" style="color: #daa520; font-size: 1.1em;">1-01</strong>
+            <strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong>
             <span id="v-age" style="color: #4caf50;">0 歲</span>
         </div>
-        <div class="family-line">父: <span id="v-father">無</span> | 母: <span id="v-mother">無</span></div>
-        <div id="v-action" style="color: #00ff00; font-size: 0.8em; margin: 4px 0;">動作: 觀察中</div>
+        <div class="family-info">
+            父：<span id="v-father">無</span> | 母：<span id="v-mother">無</span>
+        </div>
+        <div id="v-action" style="color: #00ff00; font-size: 0.8em; margin: 3px 0;">狀態：載入中</div>
         
-        <div class="attr-row">
-            <span>STR: <b id="attr-str">10</b></span> <span>CON: <b id="attr-con">10</b></span>
-            <span>SIZ: <b id="attr-siz">10</b></span> <span>DEX: <b id="attr-dex">10</b></span>
+        <div class="attr-grid">
+            <span>STR: <b id="attr-str">?</b></span> <span>CON: <b id="attr-con">?</b></span>
+            <span>SIZ: <b id="attr-siz">?</b></span> <span>DEX: <b id="attr-dex">?</b></span>
         </div>
 
         <div class="bar-wrap">
-            <div class="label"><span>天命 (HP)</span><span id="hp-txt">100%</span></div>
+            <div class="bar-label"><span>生命 (HP)</span><span id="hp-val">100%</span></div>
             <div class="bar"><div id="v-health" class="bar-fill" style="background: #e74c3c;"></div></div>
         </div>
         <div class="bar-wrap">
-            <div class="label"><span>飽食 (Food)</span><span id="fd-txt">100%</span></div>
+            <div class="bar-label"><span>飽食 (Food)</span><span id="fd-val">100%</span></div>
             <div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div>
+        </div>
+        <div class="bar-wrap">
+            <div class="bar-label"><span>體力 (Energy)</span><span id="en-val">100%</span></div>
+            <div class="bar"><div id="v-energy" class="bar-fill" style="background: #3498db;"></div></div>
         </div>
     </div>
 </div>
@@ -118,19 +123,21 @@
                     environment.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: type});
                 }
             }
-            // 始祖 4 人 (2男 2女)
+            // 始祖 4 人
             for(let i=0; i<4; i++) { villagers.push(new Villager(canvas, 1, (i < 2 ? "男" : "女"))); }
         }
 
         class Villager {
-            constructor(cvs, gen, gender, isBaby = false, x = null, y = null, fName = "無", mName = "無") {
+            constructor(cvs, gen, gender, isBaby = false, x = null, y = null, fName = "無", mName = "無", fId = null, mId = null) {
                 this.id = Math.random().toString(36).substr(2, 9);
                 this.gen = gen; this.gender = gender; this.serial = getSerial(gen, gender);
                 this.name = `${this.gen}-${this.serial}`;
-                this.x = x || cvs.width/2 + (Math.random()-0.5)*180;
-                this.y = y || cvs.height/2 + (Math.random()-0.5)*180;
+                this.x = x || cvs.width/2 + (Math.random()-0.5)*200;
+                this.y = y || cvs.height/2 + (Math.random()-0.5)*200;
                 this.father = fName; this.mother = mName;
+                this.fatherId = fId; this.motherId = mId;
                 
+                // COC6 屬性影響
                 this.str = 3 + Math.floor(Math.random()*16); 
                 this.con = 3 + Math.floor(Math.random()*16);
                 this.siz = 8 + Math.floor(Math.random()*11); 
@@ -145,32 +152,34 @@
 
             update() {
                 if(this.hp <= 0) return;
-                this.age += 0.0004; this.hunger -= 0.007; this.energy -= 0.007;
+                this.age += 0.0004; this.hunger -= 0.008; this.energy -= 0.008;
                 if(this.mateCooldown > 0) this.mateCooldown--;
 
-                if(this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
-                else if(this.hunger < 50) { this.action = "採集"; this.move(0.65); this.findFood(); }
-                else { this.action = "探索"; this.move(0.45); this.socialize(); }
-                
-                if(this.hunger <= 0) this.hp -= 0.04;
-                if(this.age > 85 && Math.random() < 0.001) this.hp = 0; // 老死
+                if(this.energy < 15) { this.action = "睡眠"; this.energy += 0.07; }
+                else if(this.hunger < 50) { this.action = "採集"; this.move(0.7); this.findRes(); }
+                else {
+                    if(this.age < 12) {
+                        let p = villagers.find(v => v.id === this.fatherId || v.id === this.motherId);
+                        if(p && p.hp > 0) { this.action = "跟隨父母"; this.angle = Math.atan2(p.y-this.y, p.x-this.x); this.move(0.4); }
+                        else { this.move(0.3); }
+                    } else { this.action = "探索中"; this.move(0.5); this.checkSocial(); }
+                }
+                if(this.hunger <= 0) this.hp -= 0.03;
+                if(this.age > 85 && Math.random() < 0.001) this.hp = 0; 
             }
 
-            findFood() {
-                let nearby = environment.find(t => t.type !== 'grass' && Math.abs(t.x-this.x)<35 && Math.abs(t.y-this.y)<35);
-                if(nearby) { this.hunger = Math.min(100, this.hunger + (this.str/75)); this.action = "進食"; }
+            findRes() {
+                let nearby = environment.find(t => (t.type !== 'grass') && Math.abs(t.x-this.x)<40 && Math.abs(t.y-this.y)<40);
+                if(nearby) { this.hunger = Math.min(100, this.hunger + (this.str/65)); this.action = "進食"; }
             }
 
-            socialize() {
+            checkSocial() {
                 villagers.forEach(o => {
                     if(o === this || o.hp <= 0 || this.age < 18 || o.age < 18) return;
-                    if(Math.hypot(this.x-o.x, this.y-o.y) < 30) {
-                        this.action = "社交中";
-                        if(this.gender !== o.gender && this.mateCooldown <= 0 && o.mateCooldown <= 0 && this.hunger > 75) {
-                            this.mateCooldown = 5000; o.mateCooldown = 5000;
-                            let baby = new Villager(canvas, Math.max(this.gen, o.gen)+1, (Math.random()>0.5?"男":"女"), true, this.x, this.y, (this.gender==="男"?this.name:o.name), (this.gender==="女"?this.name:o.name));
-                            villagers.push(baby);
-                        }
+                    if(Math.hypot(this.x-o.x, this.y-o.y) < 30 && this.gender !== o.gender && this.mateCooldown <= 0 && o.mateCooldown <= 0 && this.hunger > 75) {
+                        this.mateCooldown = 6000; o.mateCooldown = 6000;
+                        let baby = new Villager(canvas, Math.max(this.gen, o.gen)+1, (Math.random()>0.5?"男":"女"), true, this.x, this.y, (this.gender==="男"?this.name:o.name), (this.gender==="女"?this.name:o.name), (this.gender==="男"?this.id:o.id), (this.gender==="女"?this.id:o.id));
+                        villagers.push(baby);
                     }
                 });
             }
@@ -178,24 +187,24 @@
             move(spd) {
                 if(Math.random()<0.02) this.angle += (Math.random()-0.5);
                 this.x += Math.cos(this.angle)*spd; this.y += Math.sin(this.angle)*spd;
-                if(this.x < 20 || this.x > canvas.width-20) this.angle = Math.PI - this.angle;
-                if(this.y < 50 || this.y > canvas.height-20) this.angle = -this.angle;
+                if(this.x < 15 || this.x > canvas.width-15) this.angle = Math.PI - this.angle;
+                if(this.y < 50 || this.y > canvas.height-15) this.angle = -this.angle;
             }
 
             draw() {
-                if(this.hp <= 0) { ctx.fillStyle="#333"; ctx.fillRect(this.x-6,this.y-6,12,12); return; }
+                if(this.hp <= 0) { ctx.fillStyle="#444"; ctx.fillRect(this.x-6,this.y-6,12,12); return; }
                 let r = (this.age < 18) ? 6 : (10 + this.siz/2.5);
-                if(selectedId === this.id) { ctx.strokeStyle="#daa520"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(this.x,this.y,r+6,0,Math.PI*2); ctx.stroke(); }
-                ctx.fillStyle = (this.action === "睡眠") ? "#555" : (this.gender === "男" ? "#3498db" : "#e84393");
+                if(selectedId === this.id) { ctx.strokeStyle="#daa520"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(this.x,this.y,r+7,0,Math.PI*2); ctx.stroke(); }
+                ctx.fillStyle = (this.action === "睡眠") ? "#666" : (this.gender === "男" ? "#3498db" : "#e84393");
                 ctx.beginPath(); ctx.arc(this.x,this.y,r,0,Math.PI*2); ctx.fill();
                 ctx.fillStyle = "white"; ctx.font = "10px Arial"; ctx.fillText(this.name, this.x-10, this.y-r-5);
             }
         }
 
         function loop() {
-            ctx.fillStyle = "#1b301b"; ctx.fillRect(0,0,canvas.width, canvas.height);
+            ctx.fillStyle = "#1e301e"; ctx.fillRect(0,0,canvas.width, canvas.height);
             environment.forEach(t => {
-                ctx.fillStyle = (t.type === 'water') ? "#2980b9" : (t.type === 'forest' ? "#145a32" : "#1e8449");
+                ctx.fillStyle = (t.type === 'water') ? "#2a5a7a" : (t.type === 'forest' ? "#145a32" : "#2d4a2d");
                 ctx.fillRect(t.x, t.y, TILE_SIZE-1, TILE_SIZE-1);
             });
             totalMinutes += 0.05;
@@ -208,8 +217,32 @@
                     document.getElementById('v-age').innerText = Math.floor(v.age) + " 歲";
                     document.getElementById('v-father').innerText = v.father;
                     document.getElementById('v-mother').innerText = v.mother;
-                    document.getElementById('v-action').innerText = "動作: " + v.action;
+                    document.getElementById('v-action').innerText = "狀態: " + v.action;
                     document.getElementById('v-health').style.width = (v.hp/v.maxHp*100)+'%';
                     document.getElementById('v-hunger').style.width = v.hunger+'%';
+                    document.getElementById('v-energy').style.width = v.energy+'%';
                     document.getElementById('attr-str').innerText = v.str; document.getElementById('attr-con').innerText = v.con;
-                    document.getElementById('attr-siz').innerText = v.siz; document.getElementById
+                    document.getElementById('attr-siz').innerText = v.siz; document.getElementById('attr-dex').innerText = v.dex;
+                    document.getElementById('hp-val').innerText = Math.floor(v.hp/v.maxHp*100)+'%';
+                    document.getElementById('fd-val').innerText = Math.floor(v.hunger)+'%';
+                    document.getElementById('en-val').innerText = Math.floor(v.energy)+'%';
+                }
+            }
+            requestAnimationFrame(loop);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            let found = villagers.find(v => Math.hypot(v.x-(e.clientX-rect.left), v.y-(e.clientY-rect.top)) < 30 && v.hp > 0);
+            if(found) { selectedId = found.id; document.getElementById('v-name').innerText = found.name; statusWindow.style.display = 'block'; }
+            else { selectedId = null; statusWindow.style.display = 'none'; }
+        });
+
+        window.castMiracle = (t) => { villagers.forEach(v => { if(t==='food') v.hunger=100; else v.energy=100; }); };
+        window.castCalamity = (t) => { villagers.forEach(v => { if(Math.random()<0.4) v.hp -= 15; }); };
+        window.resetWorld = () => { if(confirm("確定重啟文明？")) init(); };
+        init(); loop();
+    };
+</script>
+</body>
+</html>
