@@ -1,4 +1,4 @@
-/* script.js - V7.3 疆域封印與日誌版 */
+/* script.js - V7.5 */
 let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
 let deathCount = 0, currentTab = 'All', plagueZone = null;
 const TILE_SIZE = 45, SOCIAL_RANGE = 80, MINS_IN_YEAR = 60 * 24 * 30 * 12;
@@ -13,15 +13,14 @@ window.onload = function() {
     const socialBox = document.getElementById('v-social-box');
     const noticeBoard = document.getElementById('notice-board');
 
-    // 公告日誌函數
     function addNotice(msg, typeClass = "") {
+        if (!noticeBoard) return;
         let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1;
         let mths = Math.floor((totalMinutes/(60*24*30))%12)+1;
-        let days = Math.floor((totalMinutes/(60*24))%30)+1;
         let div = document.createElement('div');
-        div.innerHTML = `<span class="notice-time">[Y${yrs} M${mths} D${days}]</span> <span class="${typeClass}">${msg}</span>`;
-        noticeBoard.prepend(div); // 最新公告在最上面
-        if (noticeBoard.childNodes.length > 50) noticeBoard.removeChild(noticeBoard.lastChild);
+        div.innerHTML = `<span class="notice-time">${yrs}年${mths}月</span> <span class="${typeClass}">${msg}</span>`;
+        noticeBoard.prepend(div);
+        if (noticeBoard.childNodes.length > 40) noticeBoard.removeChild(noticeBoard.lastChild);
     }
 
     function getSerial(gen, gender) {
@@ -42,7 +41,8 @@ window.onload = function() {
     }
 
     function init() {
-        villagers = []; environment = []; genCounters = {}; selectedId = null; totalMinutes = 0; deathCount = 0; noticeBoard.innerHTML = '';
+        villagers = []; environment = []; genCounters = {}; selectedId = null; totalMinutes = 0; deathCount = 0; 
+        if(noticeBoard) noticeBoard.innerHTML = '';
         canvas.width = window.innerWidth - 280; canvas.height = window.innerHeight;
         const cols = Math.ceil(canvas.width / TILE_SIZE), rows = Math.ceil(canvas.height / TILE_SIZE);
         for(let x=0; x<cols; x++) for(let y=0; y<rows; y++) {
@@ -52,7 +52,7 @@ window.onload = function() {
             let v = new Villager(canvas, 1, (i < 2 ? "男" : "女"), false, null, null, "無", "無", null, null, 20);
             v.isElder = true; villagers.push(v);
         }
-        addNotice("文明起源：四位始祖長老降臨 Underworld。", "notice-elder");
+        addNotice("文明重建：四位始祖長老 👑 降臨。", "notice-elder");
         syncBottomBar();
     }
 
@@ -101,7 +101,7 @@ window.onload = function() {
             if(this.age > 85) this.hp = 0;
             if(this.hp <= 0) {
                 this.hp = 0; deathCount++;
-                addNotice(`${this.isElder?"長老 ":"村民 "}${this.name} 登出 Underworld (壽命或意外)。`, "notice-death");
+                addNotice(`☠️ ${this.isElder?"長老 ":"村民 "}${this.name} 離世。`, "notice-death");
                 if(this.isElder) this.passElderTitle();
                 syncBottomBar();
             }
@@ -113,7 +113,7 @@ window.onload = function() {
             if(p.length > 0) {
                 p.sort((a,b) => ((b.con*2)+Object.keys(b.rels).length*5) - ((a.con*2)+Object.keys(a.rels).length*5));
                 p[0].isElder = true;
-                addNotice(`繼承者出現！${p[0].name} 接掌長老重任。`, "notice-elder");
+                addNotice(`👑 繼承！${p[0].name} 成為新長老。`, "notice-elder");
             }
         }
 
@@ -143,22 +143,19 @@ window.onload = function() {
             this.mateCooldown = 5000; o.mateCooldown = 5000;
             let baby = new Villager(canvas, Math.max(this.gen, o.gen)+1, (Math.random()>0.5?"男":"女"), true, this.x, this.y, (this.gender==="男"?this.name:o.name), (this.gender==="女"?this.name:o.name), (this.gender==="男"?this.id:o.id), (this.gender==="女"?this.id:o.id));
             this.rels[baby.id] = { score: 100, type: '子女', name: baby.name }; o.rels[baby.id] = { score: 100, type: '子女', name: baby.name };
-            villagers.push(baby); addNotice(`新生命降臨！${baby.name} 在部落誕生。`, "notice-birth"); syncBottomBar();
+            villagers.push(baby); addNotice(`👶 誕生：${baby.name} 加入部落。`, "notice-birth"); syncBottomBar();
         }
         findRes() {
             let t = environment.find(e => e.type !== 'grass' && Math.abs(e.x-this.x)<30 && Math.abs(e.y-this.y)<30);
             if(t) this.hunger = Math.min(100, this.hunger + (this.str/60));
         }
-
-        // --- 核心修正：疆域封印移動邏輯 ---
         move(spd) {
-            if(Math.random()<0.02) this.angle += (Math.random()-0.5);
             this.x += Math.cos(this.angle)*spd; this.y += Math.sin(this.angle)*spd;
+            if(Math.random()<0.02) this.angle += (Math.random()-0.5);
             if(this.x < 15 || this.x > canvas.width-15) this.angle = Math.PI - this.angle;
-            // 關鍵：將底部 95 像素（標籤欄位高度）設為障礙
-            if(this.y < 50 || this.y > canvas.height - 95 - 15) this.angle = -this.angle;
+            // 疆域封印：底部 110 像素
+            if(this.y < 50 || this.y > canvas.height - 110 - 15) this.angle = -this.angle;
         }
-
         draw(ctx) {
             if(this.hp <= 0) { ctx.fillStyle="#333"; ctx.fillRect(this.x-5,this.y-5,10,10); return; }
             let r = (this.age < 18) ? 6 : (10 + this.siz/2.5);
@@ -186,16 +183,26 @@ window.onload = function() {
         });
     }
 
-    window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; addNotice("天罰降臨：一場未知的瘟疫正在擴散...", "notice-death"); setTimeout(()=>plagueZone=null, 5000); };
+    window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; addNotice("⚠️ 天罰！瘟疫在隨機處爆發。", "notice-death"); setTimeout(()=>plagueZone=null, 5000); };
+    
+    // --- 核心修改：神權分立邏輯 ---
     window.castMiracle = (t) => {
-        if (!selectedId) { alert("請先點擊小人目標！"); return; }
-        let v = villagers.find(v => v.id === selectedId && v.hp > 0);
-        if (v) {
-            if (t === 'food') v.hunger = 100;
-            else { v.hp = v.maxHp; v.plagueTimer = 0; addNotice(`神蹟顯靈：${v.name} 獲得了神聖治癒。`, "notice-elder"); }
-            syncBottomBar();
+        if (t === 'food') {
+            // 全體飽食回滿
+            villagers.forEach(v => { if(v.hp > 0) v.hunger = 100; });
+            addNotice("✨ 神蹟：全體村民獲得聖餐飽足。", "notice-elder");
+        } else {
+            // 單體神聖治癒
+            if (!selectedId) { alert("神聖治癒需要先點擊一名小人！"); return; }
+            let v = villagers.find(v => v.id === selectedId && v.hp > 0);
+            if (v) {
+                v.hp = v.maxHp; v.plagueTimer = 0;
+                addNotice(`✨ 神蹟：${v.name} 獲得神聖治癒。`, "notice-elder");
+            }
         }
+        syncBottomBar();
     };
+
     window.resetWorld = () => { if(confirm("重啟文明？")) init(); };
 
     function loop() {
@@ -207,10 +214,10 @@ window.onload = function() {
             ctx.strokeStyle = "rgba(0, 255, 0, 0.6)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, 105 + p, 0, Math.PI*2); ctx.stroke();
             ctx.fillStyle = "#0f0"; ctx.font = "bold 14px Arial"; ctx.fillText("⚠ 瘟疫爆發", plagueZone.x - 35, plagueZone.y - 120);
         }
-        totalMinutes += 120;
-        let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1, days = Math.floor((totalMinutes/(60*24))%30)+1;
+        totalMinutes += 250;
+        let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1;
         let hrs = Math.floor((totalMinutes/60)%24), mins = Math.floor(totalMinutes%60);
-        timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 ${days} 日 ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
+        timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 | ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
         let aliveV = villagers.filter(v => v.hp > 0);
         document.getElementById('pop-stats').innerText = `人口：${aliveV.length} (男: ${aliveV.filter(v=>v.gender=="男").length} | 女: ${aliveV.filter(v=>v.gender=="女").length})`;
         document.getElementById('death-stats').innerText = `累積死亡：${deathCount}`;
