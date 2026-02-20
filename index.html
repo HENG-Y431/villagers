@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V4.2 - 社會與血脈完全版</title>
+    <title>Underworld V4.3 - 血脈導航版</title>
     <style>
         body { margin: 0; background: #121212; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: #e0e0e0; }
         #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #daa520; color: #00ff00; font-weight: bold; font-size: 0.9em; }
@@ -13,13 +13,10 @@
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
         button { padding: 6px 2px; cursor: pointer; background: #3d3d3d; color: white; border: 1px solid #555; transition: 0.2s; border-radius: 4px; font-weight: bold; font-size: 0.75em; }
         button:hover { background: #daa520; color: #000; }
-        
-        /* 固定在右側下方的村民面板 */
         #status-window { margin-top: auto; background: #000; border: 1px solid #daa520; padding: 12px; display: none; border-radius: 8px; font-size: 0.85em; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
         .family-line { font-size: 0.75em; color: #888; border-bottom: 1px solid #333; padding-bottom: 4px; margin-bottom: 4px; }
-        .relation-tag { color: #88c; font-size: 0.8em; margin: 4px 0; }
+        .relation-tag { color: #88c; font-size: 0.75em; margin: 4px 0; max-height: 40px; overflow-y: auto; }
         .attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.7em; color: #aaa; }
-        
         .bar-wrap { margin-top: 6px; }
         .label { font-size: 0.7em; color: #999; display: flex; justify-content: space-between; }
         .bar { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; border: 1px solid #333; }
@@ -28,15 +25,12 @@
 </head>
 <body>
 
-<div id="top-bar">世界時間：<span id="world-time">08:00</span></div>
-
+<div id="top-bar">世界曆法：<span id="world-time">08:00</span></div>
 <div id="game-container"><canvas id="worldCanvas"></canvas></div>
 
 <div id="god-panel">
     <h3>文明概況</h3>
     <div class="stat-card">人口：<span id="pop-count">0</span> | 物資：<span id="res-count">100</span></div>
-    
-    <h3>神權指令</h3>
     <div class="btn-grid">
         <button onclick="castMiracle('food')">投放聖餐</button>
         <button onclick="castMiracle('energy')">賦予精神</button>
@@ -45,7 +39,7 @@
 
     <div id="status-window">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong id="v-name" style="color: #daa520; font-size: 1.1em;">1-01</strong>
+            <strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong>
             <span id="v-age" style="color: #4caf50;">0 歲</span>
         </div>
         <div id="v-personality" style="color: #00ff00; font-size: 0.8em; font-weight: bold; margin: 2px 0;">性格：載入中</div>
@@ -99,18 +93,18 @@
         }
 
         class Villager {
-            constructor(cvs, gen, gender, isBaby = false, x = null, y = null, fName = "無", mName = "無") {
+            constructor(cvs, gen, gender, isBaby = false, x = null, y = null, fName = "無", mName = "無", fId = null, mId = null) {
                 this.id = Math.random().toString(36).substr(2, 9);
                 this.gen = gen; this.gender = gender; this.serial = getSerial(gen, gender);
                 this.name = `${this.gen}-${this.serial}`;
                 this.x = x || cvs.width/2 + (Math.random()-0.5)*200;
                 this.y = y || cvs.height/2 + (Math.random()-0.5)*200;
                 this.father = fName; this.mother = mName;
+                this.fatherId = fId; this.motherId = mId;
                 
                 this.str = 3 + Math.floor(Math.random()*16); this.con = 3 + Math.floor(Math.random()*16);
                 this.siz = 8 + Math.floor(Math.random()*11); this.dex = 3 + Math.floor(Math.random()*16);
                 
-                // 個性回歸
                 if (this.str + this.dex > 25) this.personality = "積極";
                 else if (this.siz > 15 && this.con < 10) this.personality = "懶惰";
                 else if (this.siz < 10 && this.dex > 12) this.personality = "膽小";
@@ -132,9 +126,20 @@
                 if(this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
                 else if(this.hunger < 50) { this.action = "採集"; this.move(0.75); this.findRes(); }
                 else {
-                    this.action = "探索";
-                    this.move(this.personality === "積極" ? 0.6 : 0.4);
-                    this.socialCycle();
+                    if(this.age < 12) {
+                        // 小寶寶跟隨邏輯：優先找媽媽，沒媽媽找爸爸
+                        let parent = villagers.find(v => v.id === this.motherId && v.hp > 0) || 
+                                     villagers.find(v => v.id === this.fatherId && v.hp > 0);
+                        if(parent) {
+                            this.action = "跟隨父母";
+                            this.angle = Math.atan2(parent.y - this.y, parent.x - this.x);
+                            this.move(0.45);
+                        } else { this.move(0.3); }
+                    } else {
+                        this.action = "探索";
+                        this.move(this.personality === "積極" ? 0.6 : 0.4);
+                        this.socialCycle();
+                    }
                 }
                 if(this.hunger <= 0) this.hp -= 0.04;
                 if(this.age > 85) this.hp = 0; 
@@ -144,28 +149,30 @@
                 villagers.forEach(o => {
                     if(o === this || o.hp <= 0) return;
                     let d = Math.hypot(this.x - o.x, this.y - o.y);
-                    if(d < 40) {
-                        if(!this.rels[o.id]) this.rels[o.id] = { score: 0, type: '陌生人' };
-                        this.rels[o.id].score += 0.5; // 大幅加快好感累積
+                    if(d < 45) {
+                        if(!this.rels[o.id]) this.rels[o.id] = { score: 0, type: '陌生人', name: o.name };
+                        this.rels[o.id].score += 0.8; 
                         
                         let r = this.rels[o.id];
                         if(this.age > 40 && o.age < 18) r.type = '師生';
-                        else if(r.score > 20) { // 門檻下調，更容易成為戀人
+                        else if(r.score > 15) { 
                             if(this.gender !== o.gender && this.age >= 18 && o.age >= 18) {
                                 r.type = '戀人';
-                                if(this.mateCooldown <= 0 && o.mateCooldown <= 0 && this.hunger > 60) {
+                                if(this.mateCooldown <= 0 && o.mateCooldown <= 0 && this.hunger > 65) {
                                     this.reproduce(o);
                                 }
                             } else { r.type = '朋友'; }
                         }
-                        this.action = "社交中";
                     }
                 });
             }
 
             reproduce(o) {
                 this.mateCooldown = 5000; o.mateCooldown = 5000;
-                let baby = new Villager(canvas, Math.max(this.gen, o.gen)+1, (Math.random()>0.5?"男":"女"), true, this.x, this.y, (this.gender==="男"?this.name:o.name), (this.gender==="女"?this.name:o.name));
+                let bGender = (Math.random() > 0.5 ? "男" : "女");
+                let baby = new Villager(canvas, Math.max(this.gen, o.gen)+1, bGender, true, this.x, this.y, 
+                                        (this.gender==="男"?this.name:o.name), (this.gender==="女"?this.name:o.name),
+                                        (this.gender==="男"?this.id:o.id), (this.gender==="女"?this.id:o.id));
                 villagers.push(baby);
             }
 
@@ -182,7 +189,7 @@
             }
 
             draw() {
-                if(this.hp <= 0) { ctx.fillStyle="#444"; ctx.fillRect(this.x-5,this.y-5,10,10); return; }
+                if(this.hp <= 0) { ctx.fillStyle="#333"; ctx.fillRect(this.x-5,this.y-5,10,10); return; }
                 let r = (this.age < 18) ? 6 : (10 + this.siz/2.5);
                 if(selectedId === this.id) { ctx.strokeStyle="#daa520"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(this.x,this.y,r+6,0,Math.PI*2); ctx.stroke(); }
                 ctx.fillStyle = (this.action === "睡眠") ? "#666" : (this.gender === "男" ? "#3498db" : "#e84393");
@@ -204,7 +211,6 @@
             if(selectedId) {
                 let v = villagers.find(v => v.id === selectedId);
                 if(v) {
-                    // 修正百分比顯示
                     document.getElementById('v-age').innerText = Math.floor(v.age) + " 歲";
                     document.getElementById('v-personality').innerText = "性格：" + v.personality;
                     document.getElementById('v-father').innerText = v.father;
@@ -219,8 +225,11 @@
                     document.getElementById('hp-txt').innerText = hpPct + '%';
                     document.getElementById('fd-txt').innerText = fdPct + '%';
                     
-                    let relTags = Object.values(v.rels).map(r => r.type).filter(t => t !== '陌生人');
-                    document.getElementById('v-social').innerText = "關係：" + (relTags.length > 0 ? Array.from(new Set(relTags)).join(', ') : '暫無');
+                    // 修正關係顯示：對象名稱 + 類型
+                    let relStrings = Object.values(v.rels)
+                        .filter(r => r.type !== '陌生人')
+                        .map(r => `${r.type}: ${r.name}`);
+                    document.getElementById('v-social').innerText = "關係：" + (relStrings.length > 0 ? relStrings.join(', ') : '暫無');
                 }
             }
             requestAnimationFrame(loop);
@@ -228,15 +237,4 @@
 
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
-            let found = villagers.find(v => Math.hypot(v.x-(e.clientX-rect.left), v.y-(e.clientY-rect.top)) < 30 && v.hp > 0);
-            if(found) { selectedId = found.id; document.getElementById('v-name').innerText = found.name; statusWindow.style.display = 'block'; }
-            else { selectedId = null; statusWindow.style.display = 'none'; }
-        });
-
-        window.castMiracle = (t) => villagers.forEach(v => { if(t==='food') v.hunger=100; else v.energy=100; });
-        window.resetWorld = () => { if(confirm("確定重啟文明？")) init(); };
-        init(); loop();
-    };
-</script>
-</body>
-</html>
+            let found = villagers.find(v => Math.hypot(v.x-(e.clientX-rect
