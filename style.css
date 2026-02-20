@@ -29,7 +29,30 @@ button:hover { background: #daa520; color: #000; }
 .bar { width: 100%; height: 5px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; }
 .bar-fill { height: 100%; transition: width 0.3s; }
 
-/* 新增按鈕描述樣式 */
-.btn-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.btn-desc { font-size: 0.65em; color: #888; text-align: center; }
-.btn-grid { grid-template-columns: 1fr 1fr; gap: 10px 5px; } /* 增加間距 */
+/* 1. 按鈕網格區域 */
+.btn-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 分成左右兩欄 */
+    gap: 12px; /* 每一組按鈕之間的間距加大，比較不擠 */
+    margin-bottom: 10px;
+}
+
+/* 2. 每一組「按鈕+說明」的容器 */
+.btn-wrap {
+    display: flex; /* 開啟彈性排版 */
+    flex-direction: column; /* 關鍵指令：設定為「垂直」排列 (樓上樓下) */
+    align-items: center; /* 讓它們水平置中對齊 */
+}
+
+/* 3. 讓容器裡的按鈕填滿寬度 */
+.btn-wrap button {
+    width: 100%; /* 這樣按鈕會一樣寬，比較整齊 */
+}
+
+/* 4. 按鈕下方的說明文字 */
+.btn-desc {
+    font-size: 0.7em; /* 字體縮小 */
+    color: #aaa; /* 顏色變灰，當個稱職的配角 */
+    margin-top: 4px; /* 跟上方按鈕保持一點距離 */
+    white-space: nowrap; /* 關鍵指令：強制不準換行！避免出現「解 毒」這種慘劇 */
+}
