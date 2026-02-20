@@ -1,4 +1,4 @@
-/* config.js - V10.2 數據中心 */
+/* config.js - 文明法典：V11.0 校準版 */
 const CONFIG = {
     GAME_SPEED: 250,           
     SOCIAL_RANGE: 130,         
@@ -16,7 +16,7 @@ const CONFIG = {
     FOOTER_HEIGHT: 115         
 };
 
-// 全域數據 (禁止在 script.js 重複宣告)
+// 全域變數 - 嚴禁在其他檔案使用 let 重複宣告
 let villagers = [], environment = [], selectedId = null, matchId = null;
 let totalMinutes = 0, genCounters = {}, deathCount = 0, currentTab = 'All';
 let plagueZone = null, gracePoints = CONFIG.INITIAL_GRACE;
