@@ -1,4 +1,4 @@
-/* script.js - V10.0 世界繪製與 UI 引擎 */
+/* script.js - V10.2 引擎校正：修復分頁與社交 */
 
 window.onload = function() {
     const canvas = document.getElementById('worldCanvas');
@@ -15,11 +15,34 @@ window.onload = function() {
             let v = new Villager(canvas, 1, (i < 2 ? "男" : "女"), false, null, null, "無", "無", null, null, 20);
             v.isElder = true; villagers.push(v);
         }
-        addNotice("文明起源：始祖降臨部落 👑", "notice-elder");
+        addNotice("文明起源：始祖降臨 👑", "notice-elder");
         syncBottomBar();
     }
 
-    window.castMiracle = (t) => { /* 點數邏輯同 V9.9 */ };
+    // --- 神權函數 ---
+    window.castMiracle = (t) => {
+        if (t === 'food') {
+            if (gracePoints < CONFIG.COST_FOOD) { alert(`點數不足`); return; }
+            updateGrace(-CONFIG.COST_FOOD); villagers.forEach(v => { if(v.hp > 0) v.hunger = 100; });
+        } else {
+            if (!selectedId) return;
+            if (gracePoints < CONFIG.COST_ENERGY) { alert(`點數不足`); return; }
+            let v = villagers.find(v => v.id === selectedId && v.hp > 0);
+            if (v) { updateGrace(-CONFIG.COST_ENERGY); v.hp = v.maxHp; v.evolveRandomStat(true); syncBottomBar(); }
+        }
+    };
+    window.castLoveMiracle = () => {
+        if (!selectedId) return;
+        if (gracePoints < CONFIG.COST_LOVE) { alert(`點數不足`); return; }
+        if (!matchId) { matchId = selectedId; addNotice(`🔮 選中命定之人。`); }
+        else {
+            if (matchId === selectedId) { matchId = null; return; }
+            let v1 = villagers.find(v => v.id === matchId && v.hp > 0), v2 = villagers.find(v => v.id === selectedId && v.hp > 0);
+            if (v1 && v2) { updateGrace(-CONFIG.COST_LOVE); v1.rels[v2.id] = { score: 100, type: '戀人', name: v2.name }; v2.rels[v1.id] = { score: 100, type: '戀人', name: v1.name }; v1.reproduce(v2); }
+            matchId = null;
+        }
+    };
+    window.castPlague = () => { plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; addNotice("⚠️ 天罰爆發！", "notice-death"); setTimeout(()=>plagueZone=null, 5000); };
     window.resetWorld = () => { if(confirm("重啟文明？")) init(); };
 
     function loop() {
@@ -28,7 +51,7 @@ window.onload = function() {
         
         totalMinutes += CONFIG.GAME_SPEED; 
         
-        // 修正：世界曆年月日時分顯示
+        // 修正時間顯示
         let yrs = Math.floor(totalMinutes / CONFIG.MINS_IN_YEAR) + 1;
         let mths = Math.floor((totalMinutes % CONFIG.MINS_IN_YEAR) / CONFIG.MINS_IN_MONTH) + 1;
         let days = Math.floor((totalMinutes % CONFIG.MINS_IN_MONTH) / CONFIG.MINS_IN_DAY) + 1;
@@ -55,21 +78,21 @@ window.onload = function() {
                 document.getElementById('v-health').style.width = (v.hp/v.maxHp*100)+'%';
                 document.getElementById('v-hunger').style.width = v.hunger+'%';
                 
-                // 社交復甦：修正分類過濾器
-                let fam = [], lov = [], fri = [];
+                // 社交復甦：修正分類
+                let family = [], lovers = [];
                 Object.values(v.rels).forEach(r => {
-                    if(['父親','母親','子女'].includes(r.type)) fam.push(r.name);
-                    else if(r.type === '戀人') lov.push(r.name);
-                    else fri.push(r.name);
+                    if(r.type === '家族' || r.type === '子女') family.push(r.name);
+                    else if(r.type === '戀人') lovers.push(r.name);
                 });
-                let h = fam.length ? `<div class="rel-header">👪 家族</div><div class="rel-tags">${fam.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>` : '';
-                h += lov.length ? `<div class="rel-header">❤️ 戀人</div><div class="rel-tags">${lov.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>` : '';
+                let h = family.length ? `<div class="rel-header">👪 家族</div><div class="rel-tags">${family.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>` : '';
+                h += lovers.length ? `<div class="rel-header">❤️ 戀人</div><div class="rel-tags">${lovers.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>` : '';
                 document.getElementById('v-social-box').innerHTML = h || '暫無社交';
-            }
+            } else { selectedId = null; document.getElementById('status-window').style.display='none'; }
         }
         requestAnimationFrame(loop);
     }
 
+    // 修正點擊座標判定
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left, my = e.clientY - rect.top;
@@ -78,11 +101,10 @@ window.onload = function() {
         if(found) document.getElementById('status-window').style.display = 'block';
         syncBottomBar();
     });
-
     init(); loop();
 };
 
-function addNotice(msg, cls) {
+function addNotice(msg, cls = "") {
     const board = document.getElementById('notice-board');
     if(!board) return;
     let div = document.createElement('div');
@@ -95,14 +117,30 @@ function getCoC6Label(v) {
     if(v>=14) return {txt:"超群",cls:"rank-good"}; 
     return {txt:"正常",cls:""}; 
 }
+
+// --- 核心修正：重新補回世代分頁邏輯 ---
 function syncBottomBar() {
-    const bar = document.getElementById('bottom-bar');
-    if(!bar) return; bar.innerHTML = '';
-    villagers.filter(v=>v.hp>0).forEach(v => {
+    let aliveV = villagers.filter(v=>v.hp>0);
+    const genTabs = document.getElementById('gen-tabs'), bottomBar = document.getElementById('bottom-bar');
+    if(!genTabs || !bottomBar) return;
+
+    // 1. 生成分頁
+    let gens = ['All', ...new Set(aliveV.map(v=>v.gen))].sort((a,b)=>a-b);
+    genTabs.innerHTML = '';
+    gens.forEach(g => {
+        let btn = document.createElement('div'); btn.className = `tab-btn ${currentTab == g ? 'active' : ''}`;
+        btn.innerText = g == 'All' ? '全部' : `G${g}`; 
+        btn.onclick = (e) => { e.stopPropagation(); currentTab = g; syncBottomBar(); }; 
+        genTabs.appendChild(btn);
+    });
+
+    // 2. 生成村民按鈕
+    bottomBar.innerHTML = '';
+    aliveV.filter(v => currentTab == 'All' || v.gen == currentTab).forEach(v => {
         let btn = document.createElement('div');
         btn.className = `v-btn ${v.gender==="男"?"male":"female"} ${selectedId===v.id?"selected":""}`;
         btn.innerText = v.name;
         btn.onclick = (e) => { e.stopPropagation(); selectedId = v.id; document.getElementById('status-window').style.display='block'; syncBottomBar(); };
-        bar.appendChild(btn);
+        bottomBar.appendChild(btn);
     });
 }
