@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>文明演變沙盒 - Underworld 模擬器</title>
+    <style>
+        body { margin: 0; background: #222; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: white; }
+        #game-container { position: relative; flex-grow: 1; height: 100vh; background: #3a5a3a; cursor: crosshair; }
+        canvas { display: block; }
+
+        /* 神之操控面板 */
+        #god-panel { width: 250px; background: #333; border-left: 2px solid #555; padding: 15px; box-shadow: -2px 0 10px rgba(0,0,0,0.5); z-index: 100; }
+        h2 { color: #ffd700; font-size: 1.2em; border-bottom: 1px solid #555; padding-bottom: 10px; }
+        .stat-group { margin-bottom: 15px; font-size: 0.9em; }
+        button { width: 100%; padding: 10px; margin: 5px 0; cursor: pointer; background: #444; color: white; border: 1px solid #666; transition: 0.3s; }
+        button:hover { background: #666; }
+        button.danger { background: #822; }
+        button.danger:hover { background: #a33; }
+
+        /* 村民狀態視窗 (DayZ/Skylines 風格) */
+        #status-window { 
+            position: absolute; width: 180px; background: rgba(0, 0, 0, 0.8); border: 1px dotted #0f0; 
+            padding: 10px; display: none; pointer-events: none; border-radius: 5px; font-size: 0.85em; z-index: 1000;
+        }
+        .bar { width: 100%; height: 5px; background: #555; margin-top: 3px; }
+        .bar-fill { height: 100%; width: 50%; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="worldCanvas"></canvas>
+    <div id="status-window">
+        <strong id="v-name">村民</strong><br>
+        狀態：<span id="v-action">觀察中</span><hr>
+        體力：<div class="bar"><div id="v-health" class="bar-fill" style="background: #4f4;"></div></div>
+        飢餓：<div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f44;"></div></div>
+    </div>
+</div>
+
+<div id="god-panel">
+    <h2>神之權限 (System)</h2>
+    <div class="stat-group">
+        村莊人口：<span id="pop-count">0</span><br>
+        總資源：<span id="res-count">0</span>
+    </div>
+    
+    <hr>
+    <h3>資源調度</h3>
+    <button onclick="dispatchResource('wood')">投放木材 (+50)</button>
+    <button onclick="dispatchResource('food')">投放食物 (+50)</button>
+    
+    <h3>災難管理</h3>
+    <button class="danger" onclick="triggerDisaster('lightning')">降下雷擊 (隨機減員)</button>
+    <button class="danger" onclick="triggerDisaster('famine')">引發饑荒 (加速飢餓)</button>
+    
+    <hr>
+    <p style="font-size: 0.7em; color: #888;">提示：點擊地圖上的村民查看詳細狀態。</p>
+</div>
+
+<script>
+    const canvas = document.getElementById('worldCanvas');
+    const ctx = canvas.getContext('2d');
+    const popDisplay = document.getElementById('pop-count');
+    const resDisplay = document.getElementById('res-count');
+    const statusWindow = document.getElementById('status-window');
+
+    let villagers = [];
+    let globalResources = 100;
+    let selectedVillager = null;
+
+    // 初始化畫布
+    function resize() {
+        canvas.width = window.innerWidth - 250;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // 村民類別
+    class Villager {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.name = "ID-" + Math.floor(Math.random() * 9000);
+            this.health = 100;
+            this.hunger = 0;
+            this.action = "遊蕩";
+            this.size = 8;
+            this.speed = Math.random() * 1 + 0.5;
+            this.dx = (Math.random() - 0.5) * 2;
+            this.dy = (Math.random() - 0.5) * 2;
+        }
+
+        update() {
+            // 隨機移動
+            if (Math.random() < 0.02) {
+                this.dx = (Math.random() - 0.5) * 2;
+                this.dy = (Math.random() - 0.5) * 2;
+            }
+            this.x += this.dx * this.speed;
+            this.y += this.dy * this.speed;
+
+            // 邊界檢查
+            if (this.x < 0 || this.x > canvas.width) this.dx *= -1;
+            if (this.y < 0 || this.y > canvas.height) this.dy *= -1;
+
+            // 狀態演變
+            this.hunger += 0.05;
+            if (this.hunger > 100) this.health -= 0.1;
+            
+            this.action = this.hunger > 50 ? "尋找食物" : "巡邏中";
+        }
+
+        draw() {
+            ctx.fillStyle = (selectedVillager === this) ? "#fff" : "#fbca03";
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // 初始化村民
+    for(let i=0; i<10; i++) {
+        villagers.push(new Villager(Math.random()*canvas.width, Math.random()*canvas.height));
+    }
+
+    // 遊戲主循環
+    function loop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        villagers = villagers.filter(v => v.health > 0);
+        
+        villagers.forEach(v => {
+            v.update();
+            v.draw();
+        });
+
+        // 更新 UI
+        popDisplay.innerText = villagers.length;
+        resDisplay.innerText = Math.floor(globalResources);
+        
+        if (selectedVillager) {
+            updateStatusWindow();
+        }
+
+        requestAnimationFrame(loop);
+    }
+
+    // 點擊事件
+    canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        let found = villagers.find(v => {
+            const dist = Math.hypot(v.x - mouseX, v.y - mouseY);
+            return dist < 15;
+        });
+
+        if (found) {
+            selectedVillager = found;
+            statusWindow.style.display = 'block';
+            statusWindow.style.left = (e.clientX + 10) + 'px';
+            statusWindow.style.top = (e.clientY + 10) + 'px';
+        } else {
+            selectedVillager = null;
+            statusWindow.style.display = 'none';
+        }
+    });
+
+    function updateStatusWindow() {
+        document.getElementById('v-name').innerText = selectedVillager.name;
+        document.getElementById('v-action').innerText = selectedVillager.action;
+        document.getElementById('v-health').style.width = selectedVillager.health + '%';
+        document.getElementById('v-hunger').style.width = selectedVillager.hunger + '%';
+    }
+
+    // 操控功能
+    function dispatchResource(type) {
+        globalResources += 50;
+        if(type === 'food') {
+            villagers.forEach(v => v.hunger = Math.max(0, v.hunger - 30));
+        }
+    }
+
+    function triggerDisaster(type) {
+        if(type === 'lightning') {
+            if(villagers.length > 0) {
+                const targetIdx = Math.floor(Math.random() * villagers.length);
+                villagers[targetIdx].health = 0;
+                alert("雷擊發生！一名村民不幸喪生。");
+            }
+        } else if(type === 'famine') {
+            villagers.forEach(v => v.hunger += 40);
+            alert("饑荒蔓延，全體村民飢餓感加劇。");
+        }
+    }
+
+    loop();
+</script>
+</body>
+</html>
