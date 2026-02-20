@@ -1,4 +1,4 @@
-/* script.js - V7.0 最終校準版 */
+/* script.js - V7.2 血脈與師徒修正版 */
 let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
 let deathCount = 0, currentTab = 'All', plagueZone = null;
 const TILE_SIZE = 45, SOCIAL_RANGE = 80, MINS_IN_YEAR = 60 * 24 * 30 * 12;
@@ -17,6 +17,20 @@ window.onload = function() {
         let s = (gender === "男") ? genCounters[gen].m : genCounters[gen].f;
         if (gender === "男") genCounters[gen].m += 2; else genCounters[gen].f += 2;
         return s.toString().padStart(2, '0');
+    }
+
+    // 新增：血脈檢查工具 (追溯三代)
+    function isDirectLineage(v1, v2, depth = 1) {
+        if (depth > 3 || !v1 || !v2) return false;
+        if (v1.fatherId === v2.id || v1.motherId === v2.id) return true;
+        if (v2.fatherId === v1.id || v2.motherId === v1.id) return true;
+        
+        let v1Father = villagers.find(v => v.id === v1.fatherId);
+        let v1Mother = villagers.find(v => v.id === v1.motherId);
+        if (v1Father && isDirectLineage(v1Father, v2, depth + 1)) return true;
+        if (v1Mother && isDirectLineage(v1Mother, v2, depth + 1)) return true;
+        
+        return false;
     }
 
     function init() {
@@ -64,25 +78,24 @@ window.onload = function() {
             this.hunger -= 0.008; this.energy -= 0.008;
             if(this.mateCooldown > 0) this.mateCooldown--;
             if(this.plagueTimer > 0) this.plagueTimer--;
-
-            // 體質自癒 (禁療時不發動)
-            if(this.hp < this.maxHp && this.hunger > 50 && this.plagueTimer <= 0) {
-                this.hp = Math.min(this.maxHp, this.hp + (this.con / 5000));
-            }
-
-            // 瘟疫偵測
+            if(this.hp < this.maxHp && this.hunger > 50 && this.plagueTimer <= 0) this.hp = Math.min(this.maxHp, this.hp + (this.con / 5000));
+            
             if(plagueZone && Math.hypot(this.x-plagueZone.x, this.y-plagueZone.y) < 100) {
                 let now = Date.now(); if(now - this.lastPlague > 1000) { this.hp -= this.maxHp * 0.15; this.lastPlague = now; this.plagueTimer = 600; }
             }
 
+            // --- 社交邏輯全時段開啟 (小孩也能交朋友) ---
+            this.socialCycle();
+
             if(this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
             else if(this.hunger < 70 || (this.action === "進食" && this.hunger < 95)) { this.action = "進食"; this.move(0.75); this.findRes(); }
             else {
-                if(this.age < 12) {
+                // 修改：跟隨年齡改為 13 歲
+                if(this.age < 13) {
                     let p = villagers.find(v => v.id === this.motherId && v.hp > 0) || villagers.find(v => v.id === this.fatherId && v.hp > 0);
                     if(p) { this.action = "跟隨"; this.angle = Math.atan2(p.y - this.y, p.x - this.x); this.move(0.45); }
                     else this.move(0.3);
-                } else { this.action = "探索"; this.move(this.personality === "積極" ? 0.6 : 0.4); this.socialCycle(); }
+                } else { this.action = "探索"; this.move(this.personality === "積極" ? 0.6 : 0.4); }
             }
             if(this.hunger <= 0) this.hp -= 0.04;
             if(this.age > 85) this.hp = 0;
@@ -104,15 +117,30 @@ window.onload = function() {
                 if(Math.hypot(this.x-o.x, this.y-o.y) < SOCIAL_RANGE) {
                     if(!this.rels[o.id]) this.rels[o.id] = { score: 0, type: '陌生人', name: o.name };
                     if(!o.rels[this.id]) o.rels[this.id] = { score: 0, type: '陌生人', name: this.name };
-                    this.rels[o.id].score += 0.2; o.rels[this.id].score += 0.2;
+                    
                     let r = this.rels[o.id];
-                    if(this.age > 40 && o.age < 18) r.type = '師生';
-                    else if(r.score > 20 && r.type === '陌生人' && this.age >= 18 && o.age >= 18) {
-                        let roll = Math.random();
-                        if(this.gender !== o.gender) r.type = (roll < 0.7) ? '戀人' : '朋友';
-                        else r.type = (roll < 0.2) ? '戀人' : '朋友';
+                    // 如果已經是直系血親，則不增加好感分數，維持親情
+                    if (['父親','母親','子女'].includes(r.type)) return;
+
+                    r.score += 0.2; o.rels[this.id].score += 0.2;
+                    
+                    // 1. 判定師生 (需排除三代直系)
+                    if(this.age > 40 && o.age < 18 && !isDirectLineage(this, o)) {
+                        r.type = '師生';
+                        o.rels[this.id].type = '師生';
+                    }
+                    // 2. 判定朋友與戀人
+                    else if(r.score > 20 && (r.type === '陌生人' || r.type === '師生')) {
+                        if(this.age >= 18 && o.age >= 18) {
+                            let roll = Math.random();
+                            if(this.gender !== o.gender) r.type = (roll < 0.7) ? '戀人' : '朋友';
+                            else r.type = (roll < 0.2) ? '戀人' : '朋友';
+                        } else {
+                            r.type = '朋友';
+                        }
                         o.rels[this.id].type = r.type;
                     }
+                    
                     if(r.type === '戀人' && this.gender !== o.gender && this.mateCooldown <= 0 && o.mateCooldown <= 0 && this.hunger > 65) this.reproduce(o);
                 }
             });
@@ -161,8 +189,6 @@ window.onload = function() {
     }
 
     window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; setTimeout(()=>plagueZone=null, 5000); };
-    
-    /* 核心修改：單體神蹟 */
     window.castMiracle = (t) => {
         if (!selectedId) { alert("請先點擊小人目標！"); return; }
         let v = villagers.find(v => v.id === selectedId && v.hp > 0);
@@ -183,7 +209,7 @@ window.onload = function() {
             ctx.strokeStyle = "rgba(0, 255, 0, 0.6)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, 105 + p, 0, Math.PI*2); ctx.stroke();
             ctx.fillStyle = "#0f0"; ctx.font = "bold 14px Arial"; ctx.fillText("⚠ 瘟疫爆發", plagueZone.x - 35, plagueZone.y - 120);
         }
-        totalMinutes += 250;
+        totalMinutes += 120;
         let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1, days = Math.floor((totalMinutes/(60*24))%30)+1;
         let hrs = Math.floor((totalMinutes/60)%24), mins = Math.floor(totalMinutes%60);
         timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 ${days} 日 ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
