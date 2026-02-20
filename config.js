@@ -14,13 +14,16 @@ const CONFIG = {
     COST_FOOD: 100,            // 聖餐
     COST_ENERGY: 50,           // 治癒
     COST_LOVE: 200,            // 紅線
-    
+
     MINS_IN_YEAR: 60 * 24 * 30 * 12,
+    MINS_IN_MONTH: 60 * 24 * 30, // 一個月
+    MINS_IN_DAY: 60 * 24,        // 一天
+    
     FOOTER_HEIGHT: 115         // 下方欄位高度
 };
 
 
-// --- 關鍵修復：將全域變數移至此處，防止 villager.js 找不到 ---
+// 全域數據存放
 let villagers = [], environment = [], selectedId = null, matchId = null;
 let totalMinutes = 0, genCounters = {}, deathCount = 0, currentTab = 'All';
 let plagueZone = null, gracePoints = CONFIG.INITIAL_GRACE;
