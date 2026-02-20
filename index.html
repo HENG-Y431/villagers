@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V3.4.2 - 部落紀元</title>
+    <title>Underworld V3.6 - 血脈編號系統</title>
     <style>
         body { margin: 0; background: #1a1a1a; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: white; }
         #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #ffd700; color: #00ff00; font-weight: bold; font-size: 1em; }
@@ -19,7 +19,7 @@
         #status-window { margin-top: auto; background: #111; border: 2px solid #ffd700; padding: 10px; display: none; border-radius: 8px; font-size: 0.8em; }
         .family-info { font-size: 0.75em; color: #888; margin: 4px 0; line-height: 1.2; }
         .attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.7em; color: #aaa; }
-        .bar { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; }
+        .bar { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; border: 1px solid #444; }
         .bar-fill { height: 100%; transition: width 0.3s; }
     </style>
 </head>
@@ -33,19 +33,13 @@
     <h3>管理中心</h3>
     <div class="stat-card">人口：<span id="pop-count">0</span> | 物資：<span id="res-count">100</span></div>
     
-    <h3>神蹟干預</h3>
+    <h3>神蹟/災厄</h3>
     <div class="btn-group">
         <button onclick="castMiracle('food')">投放聖餐</button>
         <button onclick="castMiracle('energy')">神聖加護</button>
-    </div>
-
-    <h3>降下災厄</h3>
-    <div class="btn-group">
         <button style="color:#ff8;" onclick="castCalamity('disease')">疫病</button>
-        <button style="color:#f66;" onclick="castCalamity('famine')">枯竭</button>
+        <button style="color:#f66;" onclick="resetWorld()">重啟世界線</button>
     </div>
-    
-    <button style="color:#f66; font-size: 0.7em; margin-top: 5px;" onclick="resetWorld()">重啟世界線</button>
 
     <div id="status-window">
         <div style="display: flex; justify-content: space-between;">
@@ -71,6 +65,7 @@
 <script>
     let villagers = [], environment = [], selectedId = null, totalMinutes = 480, globalRes = 100;
     let fogGrid = [];
+    let genCounters = {}; // 用於存儲各世代的編號進度
     const TILE_SIZE = 40;
 
     window.onload = function() {
@@ -79,14 +74,17 @@
         const timeDisplay = document.getElementById('world-time');
         const statusWindow = document.getElementById('status-window');
 
+        function getNextSerial(gen, gender) {
+            if (!genCounters[gen]) genCounters[gen] = { male: 1, female: 2 };
+            let val = (gender === "男") ? genCounters[gen].male : genCounters[gen].female;
+            if (gender === "男") genCounters[gen].male += 2;
+            else genCounters[gen].female += 2;
+            return val.toString().padStart(2, '0');
+        }
+
         function init() {
-            // 徹底清空數據
-            villagers = [];
-            environment = [];
-            fogGrid = [];
-            selectedId = null;
-            totalMinutes = 480;
-            globalRes = 100;
+            villagers = []; environment = []; fogGrid = []; selectedId = null; 
+            totalMinutes = 480; globalRes = 100; genCounters = {};
             statusWindow.style.display = 'none';
 
             canvas.width = window.innerWidth - 280;
@@ -103,43 +101,49 @@
                 }
             }
 
-            // 初始 4 人：固定 2 男 2 女
+            // 初始 4 人：固定 2 男 2 女，世代為 1
             for(let i=0; i<4; i++) {
-                let v = new Villager(canvas);
-                v.gender = (i < 2) ? "男" : "女";
-                v.name = (v.gender === "男" ? "亞當" : "夏娃") + "-" + Math.floor(Math.random()*99);
+                let gender = (i < 2) ? "男" : "女";
+                let v = new Villager(canvas, 1, gender);
                 villagers.push(v);
             }
         }
 
         class Villager {
-            constructor(cvs, isBaby = false, x = null, y = null, fatherId = null, motherId = null) {
+            constructor(cvs, gen, gender, isBaby = false, x = null, y = null, fatherId = null, motherId = null) {
                 this.id = Math.random().toString(36).substr(2, 9);
-                this.x = x || cvs.width/2 + (Math.random()-0.5)*100;
-                this.y = y || cvs.height/2 + (Math.random()-0.5)*100;
-                this.gender = Math.random() > 0.5 ? "男" : "女";
+                this.gen = gen;
+                this.gender = gender;
+                this.serial = getNextSerial(this.gen, this.gender);
+                this.name = `${this.gen}-${this.serial}`; // 格式：世代-編號
+                
+                this.x = x || cvs.width/2 + (Math.random()-0.5)*150;
+                this.y = y || cvs.height/2 + (Math.random()-0.5)*150;
                 this.fatherId = fatherId; this.motherId = motherId;
+                
+                // COC6 屬性
                 this.str = 3 + Math.floor(Math.random() * 15);
                 this.con = 3 + Math.floor(Math.random() * 15);
                 this.siz = 8 + Math.floor(Math.random() * 10);
                 this.dex = 3 + Math.floor(Math.random() * 15);
                 this.personality = (this.str + this.dex > 24) ? "積極" : (this.con < 10 ? "懶惰" : "普通");
+                
                 this.age = isBaby ? 0 : 20;
                 this.hp = 100; this.hunger = 80; this.energy = 80;
                 this.mateCooldown = 0;
                 this.action = "漫步"; this.angle = Math.random()*Math.PI*2;
             }
+
             update() {
                 if(this.hp <= 0) return;
-                this.age += 0.0004; // 稍微放慢老化
+                this.age += 0.0004;
                 this.hunger -= 0.008; this.energy -= 0.008;
                 if(this.mateCooldown > 0) this.mateCooldown--;
                 
-                // 開疆闢地：只有成年人且在移動時緩慢揭開 (AoE 風格)
+                // 開疆闢地
                 if(this.age >= 18 && this.action !== "睡眠") {
                     let tx = Math.floor(this.x / TILE_SIZE);
                     let ty = Math.floor(this.y / TILE_SIZE);
-                    // 半徑縮小為 1，讓揭開速度合理
                     for(let i=-1; i<=1; i++){
                         for(let j=-1; j<=1; j++){
                             if(fogGrid[tx+i] && fogGrid[tx+i][ty+j] !== undefined) fogGrid[tx+i][ty+j] = false;
@@ -150,17 +154,13 @@
                 if (this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
                 else if (this.hunger < 50) { this.action = "採集"; this.move(0.7); this.findRes(); }
                 else {
-                    // 幼童跟隨父母邏輯
                     if(this.age < 12) {
                         let parent = villagers.find(v => v.id === this.fatherId || v.id === this.motherId);
                         if(parent && parent.hp > 0) {
                             this.action = "跟隨父母";
                             this.angle = Math.atan2(parent.y - this.y, parent.x - this.x);
                             this.move(0.4);
-                        } else {
-                            this.action = "迷路中";
-                            this.move(0.3);
-                        }
+                        } else { this.move(0.3); }
                     } else {
                         this.action = "開拓中";
                         this.move(0.5);
@@ -169,16 +169,19 @@
                 }
                 if (this.hunger <= 0) this.hp -= 0.04;
             }
+
             findRes() {
                 let nearby = environment.find(t => (t.type !== 'grass') && Math.abs(t.x-this.x)<30 && Math.abs(t.y-this.y)<30);
                 if(nearby) { this.hunger = Math.min(100, this.hunger + (this.str/70)); this.action = "進食中"; }
             }
+
             move(spd) {
                 if(Math.random()<0.02) this.angle += (Math.random()-0.5);
                 this.x += Math.cos(this.angle) * spd; this.y += Math.sin(this.angle) * spd;
                 if(this.x < 10 || this.x > canvas.width-10) this.angle = Math.PI - this.angle;
                 if(this.y < 50 || this.y > canvas.height-10) this.angle = -this.angle;
             }
+
             checkSocial() {
                 villagers.forEach(other => {
                     if(other === this || other.hp <= 0 || this.age < 18 || other.age < 18) return;
@@ -188,69 +191,6 @@
                     }
                 });
             }
+
             reproduce(p) {
-                this.mateCooldown = 5000; p.mateCooldown = 5000;
-                let baby = new Villager(canvas, true, this.x, this.y, (this.gender==="男"?this.id:p.id), (this.gender==="女"?this.id:p.id));
-                baby.name = "部落後裔-" + Math.floor(Math.random()*99);
-                villagers.push(baby);
-            }
-            draw() {
-                if(this.hp <= 0) { ctx.fillStyle="#444"; ctx.fillRect(this.x-5,this.y-5,10,10); return; }
-                let size = (this.age < 18) ? 6 : (10 + this.siz / 2);
-                if(selectedId === this.id) { ctx.strokeStyle="#ffd700"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(this.x,this.y,size+5,0,Math.PI*2); ctx.stroke(); }
-                ctx.fillStyle = (this.action === "睡眠") ? "#666" : (this.gender === "男" ? "#4db8ff" : "#ff85a2");
-                ctx.beginPath(); ctx.arc(this.x, this.y, size, 0, Math.PI*2); ctx.fill();
-                if(this.age < 12) { ctx.strokeStyle="rgba(255,255,255,0.3)"; ctx.beginPath(); ctx.arc(this.x,this.y,size+2,0,Math.PI*2); ctx.stroke(); }
-            }
-        }
-
-        function loop() {
-            ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width, canvas.height);
-            environment.forEach(t => {
-                let tx = Math.floor(t.x / TILE_SIZE), ty = Math.floor(t.y / TILE_SIZE);
-                if(fogGrid[tx][ty]) return;
-                if(t.type === 'water') ctx.fillStyle = "#2a5a7a";
-                else if(t.type === 'forest') ctx.fillStyle = "#1b331b";
-                else ctx.fillStyle = "#2d4a2d";
-                ctx.fillRect(t.x, t.y, TILE_SIZE-1, TILE_SIZE-1);
-            });
-            totalMinutes += 0.05; // 穩定時間增量
-            timeDisplay.innerText = `${Math.floor((totalMinutes/60)%24).toString().padStart(2,'0')}:${Math.floor(totalMinutes%60).toString().padStart(2,'0')}`;
-            villagers.forEach(v => { v.update(); v.draw(); });
-            document.getElementById('pop-count').innerText = villagers.filter(v=>v.hp>0).length;
-            document.getElementById('res-count').innerText = Math.floor(globalRes);
-            if(selectedId) {
-                let v = villagers.find(v => v.id === selectedId);
-                if(v) {
-                    document.getElementById('v-age').innerText = Math.floor(v.age) + " 歲";
-                    let f = villagers.find(p => p.id === v.fatherId);
-                    let m = villagers.find(p => p.id === v.motherId);
-                    document.getElementById('v-father').innerText = f ? f.name.split('-')[0] : "無";
-                    document.getElementById('v-mother').innerText = m ? m.name.split('-')[0] : "無";
-                    document.getElementById('v-personality').innerText = v.personality;
-                    document.getElementById('v-health').style.width = (v.hp/((v.con+v.siz)/2)*100)+'%';
-                    document.getElementById('v-hunger').style.width = v.hunger+'%';
-                    document.getElementById('v-energy').style.width = v.energy+'%';
-                    document.getElementById('v-action').innerText = "動作：" + v.action;
-                    document.getElementById('attr-str').innerText = v.str; document.getElementById('attr-con').innerText = v.con;
-                    document.getElementById('attr-siz').innerText = v.siz; document.getElementById('attr-dex').innerText = v.dex;
-                }
-            }
-            requestAnimationFrame(loop);
-        }
-
-        canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            let found = villagers.find(v => Math.hypot(v.x-(e.clientX-rect.left), v.y-(e.clientY-rect.top)) < 30 && v.hp > 0);
-            if(found) { selectedId = found.id; document.getElementById('v-name').innerText = found.name; statusWindow.style.display = 'block'; }
-            else { selectedId = null; statusWindow.style.display = 'none'; }
-        });
-
-        window.castMiracle = (t) => { if(t==='food') villagers.forEach(v=>v.hunger=100); else villagers.forEach(v=>v.energy=100); };
-        window.castCalamity = (t) => { if(t==='disease') villagers.forEach(v=>{if(Math.random()<0.3)v.isSick=true;}); else globalRes-=50; };
-        window.resetWorld = () => { if(confirm("抹除所有記憶並重啟？")) init(); };
-        init(); loop();
-    };
-</script>
-</body>
-</html>
+                this.mateCooldown = 50
