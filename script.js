@@ -1,4 +1,4 @@
-/* script.js - V6.6
+/* script.js - V7.0 最終校準版 */
 let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
 let deathCount = 0, currentTab = 'All', plagueZone = null;
 const TILE_SIZE = 45, SOCIAL_RANGE = 80, MINS_IN_YEAR = 60 * 24 * 30 * 12;
@@ -53,9 +53,7 @@ window.onload = function() {
             this.maxHp = Math.ceil((this.con + this.siz) / 2);
             this.hp = this.maxHp; this.hunger = 80; this.energy = 80;
             this.action = "漫步"; this.angle = Math.random()*Math.PI*2;
-            this.mateCooldown = 0; this.rels = {}; this.lastPlague = 0;
-            this.isElder = false;
-            this.plagueTimer = 0; // 新增：禁療計時器
+            this.mateCooldown = 0; this.rels = {}; this.lastPlague = 0; this.isElder = false; this.plagueTimer = 0;
             if(fId) this.rels[fId] = { score: 100, type: '父親', name: fName };
             if(mId) this.rels[mId] = { score: 100, type: '母親', name: mName };
         }
@@ -65,21 +63,16 @@ window.onload = function() {
             this.age = (totalMinutes - this.birthTime) / MINS_IN_YEAR;
             this.hunger -= 0.008; this.energy -= 0.008;
             if(this.mateCooldown > 0) this.mateCooldown--;
-            if(this.plagueTimer > 0) this.plagueTimer--; // 禁療計時減少
+            if(this.plagueTimer > 0) this.plagueTimer--;
 
-            // --- 修補：禁療期間不準回血，且回血速度下修 ---
+            // 體質自癒 (禁療時不發動)
             if(this.hp < this.maxHp && this.hunger > 50 && this.plagueTimer <= 0) {
                 this.hp = Math.min(this.maxHp, this.hp + (this.con / 5000));
             }
 
-            // --- 瘟疫觸發：扣血並附加禁療狀態 ---
+            // 瘟疫偵測
             if(plagueZone && Math.hypot(this.x-plagueZone.x, this.y-plagueZone.y) < 100) {
-                let now = Date.now();
-                if(now - this.lastPlague > 1000) { 
-                    this.hp -= this.maxHp * 0.15; 
-                    this.lastPlague = now; 
-                    this.plagueTimer = 600; // 禁止回血 10 秒
-                }
+                let now = Date.now(); if(now - this.lastPlague > 1000) { this.hp -= this.maxHp * 0.15; this.lastPlague = now; this.plagueTimer = 600; }
             }
 
             if(this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
@@ -93,22 +86,14 @@ window.onload = function() {
             }
             if(this.hunger <= 0) this.hp -= 0.04;
             if(this.age > 85) this.hp = 0;
-            if(this.hp <= 0) {
-                this.hp = 0; deathCount++;
-                if(this.isElder) this.passElderTitle();
-                syncBottomBar();
-            }
+            if(this.hp <= 0) { this.hp = 0; deathCount++; if(this.isElder) this.passElderTitle(); syncBottomBar(); }
         }
 
         passElderTitle() {
             this.isElder = false;
             let p = villagers.filter(v => v.hp > 0 && v.age >= 18 && !v.isElder);
             if(p.length > 0) {
-                p.sort((a,b) => {
-                    let sa = (a.con*2) + Object.keys(a.rels).length*5 + Object.values(a.rels).filter(r=>r.type==='師生').length*15;
-                    let sb = (b.con*2) + Object.keys(b.rels).length*5 + Object.values(b.rels).filter(r=>r.type==='師生').length*15;
-                    return sb - sa;
-                });
+                p.sort((a,b) => ((b.con*2)+Object.keys(b.rels).length*5) - ((a.con*2)+Object.keys(a.rels).length*5));
                 p[0].isElder = true;
             }
         }
@@ -151,13 +136,8 @@ window.onload = function() {
         draw(ctx) {
             if(this.hp <= 0) { ctx.fillStyle="#333"; ctx.fillRect(this.x-5,this.y-5,10,10); return; }
             let r = (this.age < 18) ? 6 : (10 + this.siz/2.5);
-            if(this.isElder) {
-                ctx.strokeStyle = "#daa520"; ctx.lineWidth = 2; ctx.setLineDash([5, 3]);
-                ctx.beginPath(); ctx.arc(this.x, this.y, r + 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-            }
+            if(this.isElder) { ctx.strokeStyle = "#daa520"; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.arc(this.x, this.y, r + 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
             if(selectedId === this.id) { ctx.strokeStyle="#0f0"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(this.x,this.y,r+6,0,Math.PI*2); ctx.stroke(); }
-            
-            // 瘟疫中顏色變深
             ctx.fillStyle = (this.plagueTimer > 0) ? "#4a148c" : ((this.action === "睡眠") ? "#666" : (this.gender === "男" ? "#3498db" : "#e84393"));
             ctx.beginPath(); ctx.arc(this.x,this.y,r,0,Math.PI*2); ctx.fill();
             ctx.fillStyle = "white"; ctx.font = "10px Arial"; ctx.fillText((this.isElder?"👑":"")+this.name, this.x-10, this.y-r-5);
@@ -181,25 +161,17 @@ window.onload = function() {
     }
 
     window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; setTimeout(()=>plagueZone=null, 5000); };
-    /* 修改為單體目標神蹟 */
-window.castMiracle = (t) => {
-    if (!selectedId) {
-        alert("請先點擊地圖上的小人，或從下方列表選擇一位目標！");
-        return;
-    }
     
-    let v = villagers.find(v => v.id === selectedId && v.hp > 0);
-    if (v) {
-        if (t === 'food') {
-            v.hunger = 100;
-        } else {
-            v.hp = v.maxHp;
-            v.plagueTimer = 0; // 治癒後解除禁療
+    /* 核心修改：單體神蹟 */
+    window.castMiracle = (t) => {
+        if (!selectedId) { alert("請先點擊小人目標！"); return; }
+        let v = villagers.find(v => v.id === selectedId && v.hp > 0);
+        if (v) {
+            if (t === 'food') v.hunger = 100;
+            else { v.hp = v.maxHp; v.plagueTimer = 0; }
+            syncBottomBar();
         }
-        // 觸發一次畫面上報表刷新
-        syncBottomBar(); 
-    }
-};
+    };
     window.resetWorld = () => { if(confirm("重啟文明？")) init(); };
 
     function loop() {
@@ -211,7 +183,7 @@ window.castMiracle = (t) => {
             ctx.strokeStyle = "rgba(0, 255, 0, 0.6)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, 105 + p, 0, Math.PI*2); ctx.stroke();
             ctx.fillStyle = "#0f0"; ctx.font = "bold 14px Arial"; ctx.fillText("⚠ 瘟疫爆發", plagueZone.x - 35, plagueZone.y - 120);
         }
-        totalMinutes += 120; // 延續 1 分鐘现实 = 1 遊戲年
+        totalMinutes += 250;
         let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1, days = Math.floor((totalMinutes/(60*24))%30)+1;
         let hrs = Math.floor((totalMinutes/60)%24), mins = Math.floor(totalMinutes%60);
         timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 ${days} 日 ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
@@ -229,13 +201,9 @@ window.castMiracle = (t) => {
                 document.getElementById('attr-str').innerText = v.str; document.getElementById('attr-con').innerText = v.con;
                 document.getElementById('attr-siz').innerText = v.siz; document.getElementById('attr-dex').innerText = v.dex;
                 let hpP = Math.floor(v.hp/v.maxHp*100), fdP = Math.floor(v.hunger);
-                
-                // UI 反饋：瘟疫期間血條背景變紫色
                 document.getElementById('v-health').parentElement.style.background = v.plagueTimer > 0 ? "#4a148c" : "#222";
                 document.getElementById('v-health').style.width = hpP+'%'; document.getElementById('v-hunger').style.width = fdP+'%';
-                document.getElementById('hp-txt').innerText = (v.plagueTimer > 0 ? "⚠️受感染 " : "") + hpP + '%'; 
-                document.getElementById('fd-txt').innerText = fdP+'%';
-                
+                document.getElementById('hp-txt').innerText = (v.plagueTimer > 0 ? "受感染 " : "") + hpP + '%'; document.getElementById('fd-txt').innerText = fdP+'%';
                 let g = { '❤️ 戀人': [], '👪 家族': [], '🤝 朋友': [], '🎓 師生': [] };
                 Object.values(v.rels).forEach(r => {
                     if(r.type==='戀人') g['❤️ 戀人'].push(r.name);
@@ -244,21 +212,19 @@ window.castMiracle = (t) => {
                     else if(r.type==='師生') g['🎓 師生'].push(r.name);
                 });
                 let h = '';
-                for (let [t, ns] of Object.entries(g)) {
-                    if(ns.length > 0) {
-                        let c = t.includes('戀人') ? 'type-lover' : (t.includes('家族') ? 'type-family' : (t.includes('朋友') ? 'type-friend' : 'type-mentor'));
-                        h += `<div class="rel-group"><div class="rel-header ${c}">${t}</div><div class="rel-tags">`;
-                        ns.forEach(n => h += `<span class="rel-tag">${n}</span>`);
-                        h += `</div></div>`;
-                    }
-                }
+                for (let [t, ns] of Object.entries(g)) { if(ns.length > 0) {
+                    let c = t.includes('戀人') ? 'type-lover' : (t.includes('家族') ? 'type-family' : (t.includes('朋友') ? 'type-friend' : 'type-mentor'));
+                    h += `<div class="rel-group"><div class="rel-header ${c}">${t}</div><div class="rel-tags">`;
+                    ns.forEach(n => h += `<span class="rel-tag">${n}</span>`);
+                    h += `</div></div>`;
+                }}
                 socialBox.innerHTML = h || '<div style="color:#666; font-size:0.75em; padding:10px;">暫無關係</div>';
             } else { selectedId = null; statusWindow.style.display = 'none'; syncBottomBar(); }
         }
         requestAnimationFrame(loop);
     }
     canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect(); let found = villagers.filter(v=>v.hp>0).find(v => Math.hypot(v.x-(e.clientX-rect.left), v.y-(e.clientY-rect.top)) < 30);
+        const rect = canvas.getBoundingClientRect(); let found = villagers.find(v => Math.hypot(v.x-(e.clientX-rect.left), v.y-(e.clientY-rect.top)) < 30 && v.hp > 0);
         if(found) { selectedId = found.id; statusWindow.style.display = 'block'; syncBottomBar(); } else { selectedId = null; statusWindow.style.display = 'none'; syncBottomBar(); }
     });
     init(); loop();
