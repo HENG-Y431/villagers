@@ -1,4 +1,4 @@
-/* script.js - V7.6 最終修正版 */
+/* script.js - V7.8 CoC6 鑑定版 */
 let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
 let deathCount = 0, currentTab = 'All', plagueZone = null;
 const TILE_SIZE = 45, SOCIAL_RANGE = 80, MINS_IN_YEAR = 60 * 24 * 30 * 12;
@@ -13,6 +13,17 @@ window.onload = function() {
     const socialBox = document.getElementById('v-social-box');
     const noticeBoard = document.getElementById('notice-board');
 
+    // 新增：CoC6 鑑定函數
+    function getCoC6Label(val) {
+        if (val <= 5) return { txt: "嚴重缺陷", cls: "rank-poor" };
+        if (val <= 7) return { txt: "非常不良", cls: "rank-poor" };
+        if (val <= 9) return { txt: "稍弱", cls: "" };
+        if (val <= 11) return { txt: "正常人", cls: "" };
+        if (val <= 13) return { txt: "比一般人優秀", cls: "rank-good" };
+        if (val <= 15) return { txt: "非常超群", cls: "rank-good" };
+        return { txt: "稀有", cls: "rank-rare" };
+    }
+
     function addNotice(msg, typeClass = "") {
         if (!noticeBoard) return;
         let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1;
@@ -20,7 +31,7 @@ window.onload = function() {
         let div = document.createElement('div');
         div.innerHTML = `<span class="notice-time">${yrs}年${mths}月</span> <span class="${typeClass}">${msg}</span>`;
         noticeBoard.prepend(div);
-        if (noticeBoard.childNodes.length > 50) noticeBoard.removeChild(noticeBoard.lastChild);
+        if (noticeBoard.childNodes.length > 60) noticeBoard.removeChild(noticeBoard.lastChild);
     }
 
     function getSerial(gen, gender) {
@@ -52,7 +63,7 @@ window.onload = function() {
             let v = new Villager(canvas, 1, (i < 2 ? "男" : "女"), false, null, null, "無", "無", null, null, 20);
             v.isElder = true; villagers.push(v);
         }
-        addNotice("文明重建：四位始祖長老 👑 降臨。", "notice-elder");
+        addNotice("文明重建：始祖長老降臨。", "notice-elder");
         syncBottomBar();
     }
 
@@ -63,7 +74,8 @@ window.onload = function() {
             this.name = `${this.gen}-${this.serial}`;
             this.x = x || cvs.width/2 + (Math.random()-0.5)*200;
             this.y = y || cvs.height/2 + (Math.random()-0.5)*200;
-            this.father = fName; this.mother = mName; this.fatherId = fId; this.motherId = mId;
+            this.father = fName; this.mother = mName;
+            this.fatherId = fId; this.motherId = mId;
             this.birthTime = totalMinutes - (startAge * MINS_IN_YEAR);
             this.age = startAge;
             this.str = 3 + Math.floor(Math.random()*16); this.con = 3 + Math.floor(Math.random()*16);
@@ -93,17 +105,17 @@ window.onload = function() {
             else {
                 if(this.age < 13) {
                     let p = villagers.find(v => v.id === this.motherId && v.hp > 0) || villagers.find(v => v.id === this.fatherId && v.hp > 0);
-                    if(p) { this.action = "跟隨"; this.angle = Math.atan2(p.y - this.y, p.x - this.x); this.move(0.45); }
-                    else this.move(0.3);
+                    if(p) {
+                        this.action = "跟隨"; this.angle = Math.atan2(p.y - this.y, p.x - this.x); this.move(0.45);
+                        if(Math.hypot(this.x - p.x, this.y - p.y) < 20) { this.hunger = Math.min(100, this.hunger + 0.015); }
+                    } else { this.move(0.3); }
                 } else { this.action = "探索"; this.move(this.personality === "積極" ? 0.6 : 0.4); }
             }
             if(this.hunger <= 0) this.hp -= 0.04;
             if(this.age > 85) this.hp = 0;
             if(this.hp <= 0) {
-                this.hp = 0; deathCount++;
-                addNotice(`☠️ ${this.isElder?"長老 ":"村民 "}${this.name} 離世。`, "notice-death");
-                if(this.isElder) this.passElderTitle();
-                syncBottomBar();
+                this.hp = 0; deathCount++; addNotice(`☠️ ${this.isElder?"長老 ":"村民 "}${this.name} 離世。`, "notice-death");
+                if(this.isElder) this.passElderTitle(); syncBottomBar();
             }
         }
 
@@ -112,8 +124,7 @@ window.onload = function() {
             let p = villagers.filter(v => v.hp > 0 && v.age >= 18 && !v.isElder);
             if(p.length > 0) {
                 p.sort((a,b) => ((b.con*2)+Object.keys(b.rels).length*5) - ((a.con*2)+Object.keys(a.rels).length*5));
-                p[0].isElder = true;
-                addNotice(`👑 繼承！${p[0].name} 成為新長老。`, "notice-elder");
+                p[0].isElder = true; addNotice(`👑 繼承！${p[0].name} 成為新長老。`, "notice-elder");
             }
         }
 
@@ -183,19 +194,14 @@ window.onload = function() {
     }
 
     window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; addNotice("⚠️ 天罰！瘟疫在隨機處爆發。", "notice-death"); setTimeout(()=>plagueZone=null, 5000); };
-    
-    /* 核心修改：投放聖餐改為全體 */
     window.castMiracle = (t) => {
         if (t === 'food') {
             villagers.forEach(v => { if(v.hp > 0) v.hunger = 100; });
-            addNotice("✨ 神蹟：全體村民獲得聖餐飽足。", "notice-elder");
+            addNotice("✨ 神蹟：全體獲得聖餐。", "notice-elder");
         } else {
             if (!selectedId) { alert("請先點擊小人目標！"); return; }
             let v = villagers.find(v => v.id === selectedId && v.hp > 0);
-            if (v) {
-                v.hp = v.maxHp; v.plagueTimer = 0;
-                addNotice(`✨ 神蹟：${v.name} 獲得神聖治癒。`, "notice-elder");
-            }
+            if (v) { v.hp = v.maxHp; v.plagueTimer = 0; addNotice(`✨ 神蹟：${v.name} 獲得神聖治癒。`, "notice-elder"); }
         }
         syncBottomBar();
     };
@@ -211,7 +217,9 @@ window.onload = function() {
             ctx.strokeStyle = "rgba(0, 255, 0, 0.6)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, 105 + p, 0, Math.PI*2); ctx.stroke();
             ctx.fillStyle = "#0f0"; ctx.font = "bold 14px Arial"; ctx.fillText("⚠ 瘟疫爆發", plagueZone.x - 35, plagueZone.y - 120);
         }
-        totalMinutes += 250;
+        
+        totalMinutes += 250; // 加速至 250
+        
         let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1;
         let hrs = Math.floor((totalMinutes/60)%24), mins = Math.floor(totalMinutes%60);
         timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 | ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
@@ -219,6 +227,7 @@ window.onload = function() {
         document.getElementById('pop-stats').innerText = `人口：${aliveV.length} (男: ${aliveV.filter(v=>v.gender=="男").length} | 女: ${aliveV.filter(v=>v.gender=="女").length})`;
         document.getElementById('death-stats').innerText = `累積死亡：${deathCount}`;
         villagers.forEach(v => { v.update(); v.draw(ctx); });
+        
         if(selectedId) {
             let v = villagers.find(v => v.id === selectedId);
             if(v && v.hp > 0) {
@@ -226,8 +235,14 @@ window.onload = function() {
                 document.getElementById('v-elder-tag').style.display = v.isElder ? 'block' : 'none';
                 document.getElementById('v-personality').innerText = "性格："+v.personality;
                 document.getElementById('v-father').innerText = v.father; document.getElementById('v-mother').innerText = v.mother;
-                document.getElementById('attr-str').innerText = v.str; document.getElementById('attr-con').innerText = v.con;
-                document.getElementById('attr-siz').innerText = v.siz; document.getElementById('attr-dex').innerText = v.dex;
+                
+                // --- 核心修改：屬性鑑定顯示邏輯 ---
+                let s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
+                document.getElementById('attr-str').innerHTML = `STR: ${v.str} <span class="attr-label ${s.cls}">(${s.txt})</span>`;
+                document.getElementById('attr-con').innerHTML = `CON: ${v.con} <span class="attr-label ${c.cls}">(${c.txt})</span>`;
+                document.getElementById('attr-siz').innerHTML = `SIZ: ${v.siz} <span class="attr-label ${z.cls}">(${z.txt})</span>`;
+                document.getElementById('attr-dex').innerHTML = `DEX: ${v.dex} <span class="attr-label ${d.cls}">(${d.txt})</span>`;
+                
                 let hpP = Math.floor(v.hp/v.maxHp*100), fdP = Math.floor(v.hunger);
                 document.getElementById('v-health').parentElement.style.background = v.plagueTimer > 0 ? "#4a148c" : "#222";
                 document.getElementById('v-health').style.width = hpP+'%'; document.getElementById('v-hunger').style.width = fdP+'%';
@@ -241,8 +256,8 @@ window.onload = function() {
                 });
                 let h = '';
                 for (let [t, ns] of Object.entries(g)) { if(ns.length > 0) {
-                    let c = t.includes('戀人') ? 'type-lover' : (t.includes('家族') ? 'type-family' : (t.includes('朋友') ? 'type-friend' : 'type-mentor'));
-                    h += `<div class="rel-group"><div class="rel-header ${c}">${t}</div><div class="rel-tags">`;
+                    let cl = t.includes('戀人') ? 'type-lover' : (t.includes('家族') ? 'type-family' : (t.includes('朋友') ? 'type-friend' : 'type-mentor'));
+                    h += `<div class="rel-group"><div class="rel-header ${cl}">${t}</div><div class="rel-tags">`;
                     ns.forEach(n => h += `<span class="rel-tag">${n}</span>`);
                     h += `</div></div>`;
                 }}
