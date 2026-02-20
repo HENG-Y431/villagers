@@ -1,4 +1,4 @@
-/* config.js - V10.0 數據中心 */
+/* config.js - V10.2 數據中心 */
 const CONFIG = {
     GAME_SPEED: 250,           
     SOCIAL_RANGE: 130,         
