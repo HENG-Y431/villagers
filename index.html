@@ -2,17 +2,38 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V4.6 - 部落血脈更新</title>
+    <title>Underworld V4.7 - 生存本能與行政導航</title>
     <style>
         body { margin: 0; background: #121212; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: #e0e0e0; }
         #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #daa520; color: #00ff00; font-weight: bold; font-size: 0.9em; }
+        
         #game-container { position: relative; flex-grow: 1; height: 100vh; background: #1a1a1a; }
         canvas { display: block; }
+
+        /* 底部快捷選取列 */
+        #bottom-bar { 
+            position: absolute; bottom: 0; left: 0; right: 280px; height: 65px; 
+            background: rgba(20, 20, 20, 0.95); border-top: 1px solid #444;
+            display: flex; align-items: center; padding: 0 15px; gap: 10px;
+            overflow-x: auto; z-index: 60; box-sizing: border-box;
+            scrollbar-width: thin; scrollbar-color: #daa520 #222;
+        }
+        .v-btn { 
+            padding: 6px 12px; background: #333; border: 1px solid #555; 
+            border-radius: 4px; color: #fff; cursor: pointer; white-space: nowrap; 
+            font-size: 0.8em; font-weight: bold; transition: 0.2s; flex-shrink: 0;
+        }
+        .v-btn:hover { background: #daa520; color: #000; }
+        .v-btn.selected { border-color: #daa520; background: #4a4a4a; box-shadow: 0 0 5px #daa520; }
+        .v-btn.male { border-left: 3px solid #3498db; }
+        .v-btn.female { border-left: 3px solid #e84393; }
+
         #god-panel { width: 280px; background: #1e1e1e; border-left: 2px solid #333; padding: 12px; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; }
         .stat-card { background: #2d2d2d; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #444; font-size: 0.8em; }
         .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
         button { padding: 6px 2px; cursor: pointer; background: #3d3d3d; color: white; border: 1px solid #555; transition: 0.2s; border-radius: 4px; font-weight: bold; font-size: 0.75em; }
         button:hover { background: #daa520; color: #000; }
+        
         #status-window { margin-top: auto; background: #000; border: 1px solid #daa520; padding: 12px; display: none; border-radius: 8px; font-size: 0.85em; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
         .family-line { font-size: 0.75em; color: #888; border-bottom: 1px solid #333; padding-bottom: 4px; margin-bottom: 4px; }
         .relation-tag { color: #88c; font-size: 0.75em; margin: 4px 0; max-height: 80px; overflow-y: auto; line-height: 1.4; border-top: 1px solid #333; padding-top: 4px; }
@@ -26,10 +47,13 @@
 <body>
 
 <div id="top-bar">世界時間：<span id="world-time">08:00</span></div>
-<div id="game-container"><canvas id="worldCanvas"></canvas></div>
+<div id="game-container">
+    <canvas id="worldCanvas"></canvas>
+    <div id="bottom-bar"></div>
+</div>
 
 <div id="god-panel">
-    <h3>創世管理 - 生日修正版</h3>
+    <h3>文明概況</h3>
     <div class="stat-card">人口：<span id="pop-count">0</span> | 物資：<span id="res-count">100</span></div>
     <div class="btn-grid">
         <button onclick="castMiracle('food')">投放聖餐</button>
@@ -65,12 +89,13 @@
 <script>
     let villagers = [], environment = [], selectedId = null, totalMinutes = 480, globalRes = 100, genCounters = {};
     const TILE_SIZE = 45;
-    const SOCIAL_RANGE = 80; // 領域社交範圍
+    const SOCIAL_RANGE = 80;
 
     window.onload = function() {
         const canvas = document.getElementById('worldCanvas');
         const ctx = canvas.getContext('2d');
         const timeDisplay = document.getElementById('world-time');
+        const bottomBar = document.getElementById('bottom-bar');
         const statusWindow = document.getElementById('status-window');
 
         function getSerial(gen, gender) {
@@ -91,6 +116,7 @@
                 }
             }
             for(let i=0; i<4; i++) { villagers.push(new Villager(canvas, 1, (i < 2 ? "男" : "女"))); }
+            syncBottomBar();
         }
 
         class Villager {
@@ -112,8 +138,6 @@
                 this.action = "漫步"; this.angle = Math.random()*Math.PI*2;
                 this.mateCooldown = 0;
                 this.rels = {}; 
-
-                // 初始化血緣
                 if(fId) this.rels[fId] = { score: 100, type: '父親', name: fName };
                 if(mId) this.rels[mId] = { score: 100, type: '母親', name: mName };
             }
@@ -123,16 +147,16 @@
                 this.age += 0.0004; this.hunger -= 0.008; this.energy -= 0.008;
                 if(this.mateCooldown > 0) this.mateCooldown--;
 
-                if(this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
-                else if(this.hunger < 50) { this.action = "採集"; this.move(0.75); this.findRes(); }
-                else {
+                // 生存本能調整：飢餓門檻提高至 70%，進食直到 95%
+                if(this.energy < 15) { 
+                    this.action = "睡眠"; this.energy += 0.08; 
+                } else if(this.hunger < 70 || (this.action === "進食" && this.hunger < 95)) { 
+                    this.action = "進食"; this.move(0.75); this.findRes(); 
+                } else {
                     if(this.age < 12) {
                         let parent = villagers.find(v => v.id === this.motherId && v.hp > 0) || villagers.find(v => v.id === this.fatherId && v.hp > 0);
-                        if(parent) {
-                            this.action = "跟隨父母";
-                            this.angle = Math.atan2(parent.y - this.y, parent.x - this.x);
-                            this.move(0.45);
-                        } else { this.move(0.3); }
+                        if(parent) { this.action = "跟隨父母"; this.angle = Math.atan2(parent.y - this.y, parent.x - this.x); this.move(0.45); }
+                        else { this.move(0.3); }
                     } else {
                         this.action = "探索";
                         this.move(this.personality === "積極" ? 0.6 : 0.4);
@@ -147,20 +171,13 @@
                 villagers.forEach(o => {
                     if(o === this || o.hp <= 0) return;
                     let d = Math.hypot(this.x - o.x, this.y - o.y);
-                    if(d < SOCIAL_RANGE) { // 領域偵測
+                    if(d < SOCIAL_RANGE) {
                         if(!this.rels[o.id]) this.rels[o.id] = { score: 0, type: '陌生人', name: o.name };
                         if(!o.rels[this.id]) o.rels[this.id] = { score: 0, type: '陌生人', name: this.name };
-                        
-                        // 雙向增加好感
-                        this.rels[o.id].score += 0.2;
-                        o.rels[this.id].score += 0.2;
-                        
+                        this.rels[o.id].score += 0.2; o.rels[this.id].score += 0.2;
                         let r = this.rels[o.id];
-                        // 排除血親成為戀人
                         let isFamily = (o.id === this.fatherId || o.id === this.motherId || o.fatherId === this.id || o.motherId === this.id);
-                        
-                        if(isFamily) return; // 血親關係不變更類型
-
+                        if(isFamily) return;
                         if(this.age > 40 && o.age < 18) r.type = '師生';
                         else if(r.score > 20) { 
                             if(this.gender !== o.gender && this.age >= 18 && o.age >= 18) {
@@ -175,17 +192,15 @@
             reproduce(o) {
                 this.mateCooldown = 5000; o.mateCooldown = 5000;
                 let baby = new Villager(canvas, Math.max(this.gen, o.gen)+1, (Math.random()>0.5?"男":"女"), true, this.x, this.y, (this.gender==="男"?this.name:o.name), (this.gender==="女"?this.name:o.name), (this.gender==="男"?this.id:o.id), (this.gender==="女"?this.id:o.id));
-                
-                // 父母加入子女關係
                 this.rels[baby.id] = { score: 100, type: '子女', name: baby.name };
                 o.rels[baby.id] = { score: 100, type: '子女', name: baby.name };
-                
                 villagers.push(baby);
+                syncBottomBar(); // 人口變動更新底部列
             }
 
             findRes() {
                 let t = environment.find(e => e.type !== 'grass' && Math.abs(e.x-this.x)<30 && Math.abs(e.y-this.y)<30);
-                if(t) { this.hunger = Math.min(100, this.hunger + (this.str/60)); this.action = "進食"; }
+                if(t) { this.hunger = Math.min(100, this.hunger + (this.str/60)); }
             }
 
             move(spd) {
@@ -205,6 +220,23 @@
             }
         }
 
+        // 底部列同步邏輯
+        function syncBottomBar() {
+            bottomBar.innerHTML = '';
+            villagers.filter(v => v.hp > 0).forEach(v => {
+                let btn = document.createElement('div');
+                btn.className = 'v-btn ' + (v.gender === "男" ? "male" : "female");
+                if (selectedId === v.id) btn.classList.add('selected');
+                btn.innerText = v.name;
+                btn.onclick = () => {
+                    selectedId = v.id;
+                    statusWindow.style.display = 'block';
+                    syncBottomBar();
+                };
+                bottomBar.appendChild(btn);
+            });
+        }
+
         function loop() {
             ctx.fillStyle = "#1e301e"; ctx.fillRect(0,0,canvas.width, canvas.height);
             environment.forEach(t => {
@@ -213,11 +245,18 @@
             });
             totalMinutes += 0.05;
             timeDisplay.innerText = `${Math.floor((totalMinutes/60)%24).toString().padStart(2,'0')}:${Math.floor(totalMinutes%60).toString().padStart(2,'0')}`;
+            
+            let aliveBefore = villagers.filter(v => v.hp > 0).length;
             villagers.forEach(v => { v.update(); v.draw(); });
-            document.getElementById('pop-count').innerText = villagers.filter(v=>v.hp>0).length;
+            let aliveAfter = villagers.filter(v => v.hp > 0).length;
+            
+            if(aliveBefore !== aliveAfter) syncBottomBar(); // 死亡更新
+
+            document.getElementById('pop-count').innerText = aliveAfter;
             if(selectedId) {
                 let v = villagers.find(v => v.id === selectedId);
-                if(v) {
+                if(v && v.hp > 0) {
+                    document.getElementById('v-name').innerText = v.name;
                     document.getElementById('v-age').innerText = Math.floor(v.age) + " 歲";
                     document.getElementById('v-personality').innerText = "性格：" + v.personality;
                     document.getElementById('v-father').innerText = v.father;
@@ -232,6 +271,10 @@
                     document.getElementById('fd-txt').innerText = fdPct + '%';
                     let relStrings = Object.values(v.rels).filter(r => r.type !== '陌生人').map(r => `${r.type}: ${r.name}`);
                     document.getElementById('v-social').innerText = "關係：" + (relStrings.length > 0 ? relStrings.join(', ') : '暫無');
+                } else {
+                    selectedId = null;
+                    statusWindow.style.display = 'none';
+                    syncBottomBar();
                 }
             }
             requestAnimationFrame(loop);
@@ -240,8 +283,9 @@
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
             let found = villagers.find(v => Math.hypot(v.x-(e.clientX-rect.left), v.y-(e.clientY-rect.top)) < 30 && v.hp > 0);
-            if(found) { selectedId = found.id; document.getElementById('v-name').innerText = found.name; statusWindow.style.display = 'block'; }
+            if(found) { selectedId = found.id; statusWindow.style.display = 'block'; }
             else { selectedId = null; statusWindow.style.display = 'none'; }
+            syncBottomBar();
         });
 
         window.castMiracle = (t) => villagers.forEach(v => { if(t==='food') v.hunger=100; else v.energy=100; });
