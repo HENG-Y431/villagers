@@ -2,157 +2,161 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V2.0 - 創世神模擬器</title>
+    <title>Underworld V2.1 - 生態修復版</title>
     <style>
         body { margin: 0; background: #1a1a1a; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: white; }
-        #top-bar {
-            position: absolute; top: 0; left: 0; right: 250px; height: 45px;
-            background: rgba(0,0,0,0.8); display: flex; align-items: center;
-            justify-content: center; z-index: 50; border-bottom: 2px solid #333;
-            color: #00ff00; font-weight: bold;
-        }
-        #game-container { position: relative; flex-grow: 1; height: 100vh; background: #222; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 100%; }
-        
+        #top-bar { position: absolute; top: 0; left: 0; right: 250px; height: 45px; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #444; color: #00ff00; font-weight: bold; }
+        #game-container { position: relative; flex-grow: 1; height: 100vh; background: #222; }
+        canvas { display: block; }
         #god-panel { width: 250px; background: #252525; border-left: 2px solid #444; padding: 15px; z-index: 100; box-sizing: border-box; overflow-y: auto; }
-        h2 { color: #ffd700; font-size: 1.2em; border-bottom: 1px solid #555; padding-bottom: 10px; margin: 0 0 15px 0; }
         .stat-card { background: #333; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #444; }
-        
         button { width: 100%; padding: 12px; margin: 5px 0; cursor: pointer; background: #444; color: white; border: 1px solid #666; transition: 0.2s; border-radius: 5px; font-weight: bold; }
         button:hover { background: #ffd700; color: #000; }
-        button.danger { border-color: #822; color: #ff8888; }
-        button.danger:hover { background: #822; color: white; }
-
-        #status-window { 
-            position: absolute; width: 210px; background: rgba(0, 0, 0, 0.9); border: 1px solid #ffd700; 
-            padding: 15px; display: none; pointer-events: none; border-radius: 10px; z-index: 1000;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-        .bar-container { margin: 8px 0; }
-        .bar-label { font-size: 0.75em; color: #bbb; display: flex; justify-content: space-between; }
-        .bar { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 3px; border: 1px solid #444; }
-        .bar-fill { height: 100%; width: 0%; transition: width 0.4s ease-out; }
+        #status-window { position: absolute; width: 210px; background: rgba(0, 0, 0, 0.9); border: 1px solid #ffd700; padding: 15px; display: none; pointer-events: none; border-radius: 10px; z-index: 1000; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .bar { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 4px; border: 1px solid #444; }
+        .bar-fill { height: 100%; transition: width 0.3s; }
     </style>
 </head>
 <body>
 
-<div id="top-bar">系統時間：<span id="world-time">載入中...</span></div>
+<div id="top-bar">系統時間：<span id="world-time">初始化中...</span></div>
 
 <div id="game-container">
     <canvas id="worldCanvas"></canvas>
     <div id="status-window">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong id="v-name" style="font-size: 1.1em; color: #ffd700;">村民</strong>
-            <span id="v-gender" style="font-size: 0.8em; opacity: 0.8;"></span>
-        </div>
-        <div id="v-action" style="color: #0f0; font-size: 0.85em; margin: 5px 0;">目前：觀察中</div>
-        <hr style="border: 0; border-top: 1px solid #444; margin: 10px 0;">
-        
-        <div class="bar-container">
-            <div class="bar-label"><span>天命 (HP)</span><span id="hp-val">100%</span></div>
-            <div class="bar"><div id="v-health" class="bar-fill" style="background: #ff4d4d;"></div></div>
-        </div>
-        <div class="bar-container">
-            <div class="bar-label"><span>飢餓 (Food)</span><span id="fd-val">100%</span></div>
-            <div class="bar"><div id="v-hunger" class="bar-fill" style="background: #ffaa00;"></div></div>
-        </div>
-        <div class="bar-container">
-            <div class="bar-label"><span>體力 (Energy)</span><span id="en-val">100%</span></div>
-            <div class="bar"><div id="v-energy" class="bar-fill" style="background: #00aaff;"></div></div>
-        </div>
+        <strong id="v-name" style="color: #ffd700;">村民</strong> <span id="v-gender"></span>
+        <div id="v-action" style="color: #0f0; font-size: 0.85em; margin: 5px 0;">狀態：觀察中</div>
+        <hr style="border:0; border-top:1px solid #444;">
+        HP<div class="bar"><div id="v-health" class="bar-fill" style="background: #ff4d4d;"></div></div>
+        飽食<div class="bar"><div id="v-hunger" class="bar-fill" style="background: #ffaa00;"></div></div>
+        體力<div class="bar"><div id="v-energy" class="bar-fill" style="background: #00aaff;"></div></div>
     </div>
 </div>
 
 <div id="god-panel">
     <h2>世界管理員 (God)</h2>
-    <div class="stat-card">
-        人口：<span id="pop-count">0</span><br>
-        物資：<span id="res-count">0</span>
-    </div>
-    
-    <h3>神蹟 (Miracles)</h3>
-    <button onclick="castMiracle('rain_food')">降下食糧 (+50 飽食)</button>
-    <button onclick="castMiracle('bless_energy')">神聖祝福 (+40 體力)</button>
-    
-    <h3>懲戒 (Judgment)</h3>
-    <button class="danger" onclick="castMiracle('strike')">隨機雷擊</button>
-    <button class="danger" style="margin-top: 20px; border-style: dashed;" onclick="resetWorld()">重啟世界線</button>
+    <div class="stat-card">人口：<span id="pop-count">0</span></div>
+    <button onclick="castMiracle('food')">投放食糧 (+50)</button>
+    <button onclick="castMiracle('energy')">賦予精神 (+40)</button>
+    <button style="color:#f66;" onclick="resetWorld()">重啟世界線</button>
 </div>
 
 <script>
-    const canvas = document.getElementById('worldCanvas');
-    const ctx = canvas.getContext('2d');
-    const timeDisplay = document.getElementById('world-time');
-    const statusWindow = document.getElementById('status-window');
-
-    let villagers = [];
-    let environment = [];
-    let globalRes = 100;
-    let selectedId = null;
-    let totalTicks = 0;
+    let villagers = [], environment = [], selectedId = null, totalTicks = 0;
     const TILE_SIZE = 40;
 
-    // --- 1. 初始化環境 ---
-    function initEnvironment() {
-        environment = [];
-        const cols = Math.ceil(canvas.width / TILE_SIZE);
-        const rows = Math.ceil(canvas.height / TILE_SIZE);
-        
-        for(let x=0; x<cols; x++) {
-            for(let y=0; y<rows; y++) {
-                let noise = Math.random();
-                let type = 'grass';
-                if(noise < 0.12) type = 'water';
-                else if(noise < 0.28) type = 'forest';
-                environment.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: type});
+    window.onload = function() {
+        const canvas = document.getElementById('worldCanvas');
+        const ctx = canvas.getContext('2d');
+        const timeDisplay = document.getElementById('world-time');
+        const statusWindow = document.getElementById('status-window');
+
+        function init() {
+            canvas.width = window.innerWidth - 250;
+            canvas.height = window.innerHeight;
+            environment = [];
+            const cols = Math.ceil(canvas.width / TILE_SIZE);
+            const rows = Math.ceil(canvas.height / TILE_SIZE);
+            for(let x=0; x<cols; x++) {
+                for(let y=0; y<rows; y++) {
+                    let r = Math.random();
+                    let type = (r < 0.1) ? 'water' : (r < 0.25 ? 'forest' : 'grass');
+                    environment.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: type});
+                }
+            }
+            villagers = Array.from({length: 4}, () => new Villager(canvas));
+        }
+
+        class Villager {
+            constructor(cvs) {
+                this.id = Math.random().toString(36).substr(2, 9);
+                this.x = Math.random() * cvs.width;
+                this.y = Math.random() * cvs.height;
+                this.gender = Math.random() > 0.5 ? "男" : "女";
+                this.name = (this.gender === "男" ? "亞當" : "夏娃") + "-" + Math.floor(Math.random()*99);
+                this.hp = 100; this.hunger = 80; this.energy = 80;
+                this.action = "漫步"; this.angle = Math.random()*Math.PI*2;
+            }
+            update() {
+                if(this.hp <= 0) return;
+                this.hunger -= 0.015; this.energy -= 0.01;
+                
+                if(this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
+                else if(this.hunger < 40) { this.action = "覓食"; this.move(); }
+                else { this.action = "漫步"; this.move(); }
+
+                if(this.hunger <= 0) this.hp -= 0.05;
+                if(this.energy >= 100) this.energy = 100;
+            }
+            move() {
+                if(Math.random() < 0.03) this.angle += (Math.random()-0.5);
+                let spd = this.action === "覓食" ? 0.9 : 0.5;
+                this.x += Math.cos(this.angle) * spd;
+                this.y += Math.sin(this.angle) * spd;
+                if(this.x < 10 || this.x > canvas.width-10) this.angle = Math.PI - this.angle;
+                if(this.y < 50 || this.y > canvas.height-10) this.angle = -this.angle;
+            }
+            draw() {
+                if(this.hp <= 0) return;
+                if(selectedId === this.id) {
+                    ctx.strokeStyle = "white"; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(this.x, this.y, 20, 0, Math.PI*2); ctx.stroke();
+                }
+                ctx.fillStyle = this.action === "睡眠" ? "#777" : (this.gender === "男" ? "#4db8ff" : "#ff85a2");
+                ctx.beginPath(); ctx.arc(this.x, this.y, 14, 0, Math.PI*2); ctx.fill();
+                if(this.hunger < 30) { ctx.fillStyle = "red"; ctx.font = "bold 16px Arial"; ctx.fillText("!", this.x-4, this.y-20); }
             }
         }
-    }
 
-    class Villager {
-        constructor() {
-            this.id = Math.random().toString(36).substr(2, 9);
-            this.x = Math.random() * (canvas.width - 100) + 50;
-            this.y = Math.random() * (canvas.height - 100) + 50;
-            this.gender = Math.random() > 0.5 ? "男" : "女";
-            this.name = (this.gender === "男" ? "亞當" : "夏娃") + "-" + Math.floor(Math.random()*99);
-            this.hp = 100;
-            this.hunger = 80 + Math.random()*20;
-            this.energy = 80 + Math.random()*20;
-            this.action = "漫步";
-            this.angle = Math.random() * Math.PI * 2;
-            this.size = 14;
-        }
-
-        update() {
-            if(this.hp <= 0) return;
-
-            // 生理消耗
-            this.hunger -= 0.012;
-            this.energy -= 0.008;
-
-            // 狀態判定
-            if(this.energy < 10 || (this.action === "睡眠" && this.energy < 95)) {
-                this.action = "睡眠";
-                this.energy += 0.06;
-            } else if(this.hunger < 40) {
-                this.action = "覓食";
-                this.move();
-            } else {
-                this.action = "漫步";
-                this.move();
+        function loop() {
+            ctx.fillStyle = "#2d4a2d"; ctx.fillRect(0,0,canvas.width, canvas.height);
+            environment.forEach(t => {
+                if(t.type === 'water') ctx.fillStyle = "#2a5a7a";
+                else if(t.type === 'forest') ctx.fillStyle = "#1b331b";
+                else return;
+                ctx.fillRect(t.x, t.y, TILE_SIZE-1, TILE_SIZE-1);
+            });
+            totalTicks++;
+            let h = Math.floor((totalTicks/60)%24), m = Math.floor(totalTicks%60);
+            timeDisplay.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+            
+            villagers.forEach(v => { v.update(); v.draw(); });
+            document.getElementById('pop-count').innerText = villagers.filter(v=>v.hp>0).length;
+            if(selectedId) {
+                let v = villagers.find(v => v.id === selectedId);
+                if(v) {
+                    document.getElementById('v-health').style.width = v.hp + '%';
+                    document.getElementById('v-hunger').style.width = v.hunger + '%';
+                    document.getElementById('v-energy').style.width = v.energy + '%';
+                    document.getElementById('v-action').innerText = "目前：" + v.action;
+                }
             }
-
-            // 飢餓扣血
-            if(this.hunger <= 0) { this.hunger = 0; this.hp -= 0.03; }
+            requestAnimationFrame(loop);
         }
 
-        move() {
-            if(Math.random() < 0.02) this.angle += (Math.random() - 0.5);
-            let speed = this.action === "覓食" ? 0.8 : 0.4;
-            this.x += Math.cos(this.angle) * speed;
-            this.y += Math.sin(this.angle) * speed;
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+            let found = villagers.find(v => Math.hypot(v.x - mx, v.y - my) < 30 && v.hp > 0);
+            if(found) {
+                selectedId = found.id;
+                document.getElementById('v-name').innerText = found.name;
+                document.getElementById('v-gender').innerText = `(${found.gender})`;
+                statusWindow.style.display = 'block';
+                statusWindow.style.left = (e.clientX + 15) + 'px';
+                statusWindow.style.top = (e.clientY + 15) + 'px';
+            } else { selectedId = null; statusWindow.style.display = 'none'; }
+        });
 
-            // 邊界回彈
-            if(this.x < 20 || this.x > canvas.width - 20) this.angle = Math.PI - this.angle;
-            if(this.y < 60 || this.
+        window.castMiracle = (t) => {
+            if(t==='food') villagers.forEach(v => v.hunger = Math.min(100, v.hunger+50));
+            if(t==='energy') villagers.forEach(v => v.energy = Math.min(100, v.energy+40));
+        };
+        window.resetWorld = () => { if(confirm("重啟世界？")) init(); };
+
+        init();
+        loop();
+    };
+</script>
+</body>
+</html>
