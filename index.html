@@ -2,12 +2,12 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V6.7.1 </title>
+    <title>Underworld V7.3</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="top-bar">世界時間：<span id="world-time">載入中...</span></div>
+<div id="top-bar">世界時間：<span id="world-time">秩序重建中...</span></div>
 
 <div id="game-container">
     <canvas id="worldCanvas"></canvas>
@@ -20,33 +20,27 @@
 <div id="god-panel">
     <h3>部落人口普查</h3>
     <div class="stat-card">
-        <div id="pop-stats">人口：0  (男: 0 | 女: 0)</div>
+        <div id="pop-stats">人口：0 (男: 0 | 女: 0)</div>
         <div id="death-stats" style="color: #ff4d4d; margin-top: 5px;">累積死亡：0</div>
     </div>
     
     <h3>神權干預</h3>
     <div class="btn-grid">
-        <div class="btn-wrap">
-            <button onclick="castMiracle('food')">投放聖餐</button>
-            <span class="btn-desc">全體飽食回滿</span>
-        </div>
-        <div class="btn-wrap">
-            <button onclick="castMiracle('energy')">神聖治癒</button>
-            <span class="btn-desc">單體回血+解毒</span>
-        </div>
-        <div class="btn-wrap">
-            <button style="color:#ff4d4d;" onclick="castPlague()">天罰災厄</button>
-            <span class="btn-desc">隨機毒霧</span>
-        </div>
-        <div class="btn-wrap">
-            <button onclick="resetWorld()" style="color:#aaa;">重啟世界</button>
-            <span class="btn-desc">文明歸零</span>
-        </div>
+        <div class="btn-wrap"><button onclick="castMiracle('food')">投放聖餐</button><span class="btn-desc">全體飽食回滿</span></div>
+        <div class="btn-wrap"><button onclick="castMiracle('energy')">神聖治癒</button><span class="btn-desc">單體回血+解毒</span></div>
+        <div class="btn-wrap"><button style="color:#ff4d4d;" onclick="castPlague()">天罰災厄</button><span class="btn-desc">隨機毒霧</span></div>
+        <div class="btn-wrap"><button onclick="resetWorld()" style="color:#aaa;">重啟世界</button><span class="btn-desc">文明歸零</span></div>
     </div>
 
+    <h3>部落紀事</h3>
+    <div id="notice-board"></div>
+
     <div id="status-window">
-        <div style="display: flex; justify-content: space-between; align-items: center;"><strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong><span id="v-age" style="color: #4caf50;">0 歲</span></div>
-        <div id="v-elder-tag" style="color: #ffd700; font-size: 0.8em; font-weight: bold; margin-bottom: 2px; display: none;">✨ 部落長老 ✨</div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong>
+            <span id="v-age" style="color: #4caf50;">0 歲</span>
+        </div>
+        <div id="v-elder-tag" style="color: #ffd700; font-size: 0.85em; font-weight: bold; margin-bottom: 2px; display: none;">✨ 部落長老 ✨</div>
         <div id="v-personality" style="color: #00ff00; font-size: 0.8em; font-weight: bold; margin: 2px 0;">性格：載入中</div>
         <div style="font-size:0.75em; color:#888; border-bottom:1px solid #333; padding-bottom:4px;">父：<span id="v-father">無</span> | 母：<span id="v-mother">無</span></div>
         <div id="v-social-box"></div>
