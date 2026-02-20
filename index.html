@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V4.72 - 文明秩序穩定版</title>
+    <title>Underworld V4.9 - 文明秩序穩定版</title>
     <style>
         body { margin: 0; background: #121212; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: #e0e0e0; }
         #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #daa520; color: #00ff00; font-weight: bold; font-size: 0.9em; }
@@ -53,11 +53,17 @@
 </div>
 
 <div id="god-panel">
-    <h3>文明概況</h3>
-    <div class="stat-card">人口：<span id="pop-count">0</span> | 物資：<span id="res-count">100</span></div>
+    <h3>部落人口普查</h3>
+    <div class="stat-card">
+        <div id="pop-stats">人口：0 (男: 0 | 女: 0)</div>
+        <div id="death-stats" style="color: #ff4d4d; margin-top: 5px;">累積死亡：0</div>
+    </div>
+    
+<h3>神權干預</h3>
     <div class="btn-grid">
         <button onclick="castMiracle('food')">投放聖餐</button>
         <button onclick="castMiracle('energy')">賦予精神</button>
+        <button class="punish" onclick="castPlague()">天罰災厄</button>
         <button onclick="resetWorld()" style="color:#aaa;">重啟世界</button>
     </div>
 
@@ -167,6 +173,43 @@
                 if(this.age > 85) this.hp = 0; 
             }
 
+            // 天罰偵測
+                if (plagueZone) {
+                    let dist = Math.hypot(this.x - plagueZone.x, this.y - plagueZone.y);
+                    if (dist < plagueZone.r) {
+                        let now = Date.now();
+                        if (now - this.lastPlagueDamage > 1000) { // 每秒扣一次 15%
+                            this.hp -= this.maxHp * 0.15;
+                            this.lastPlagueDamage = now;
+                        }
+                    }
+                }
+
+                if(this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
+                else if(this.hunger < 70 || (this.action === "進食" && this.hunger < 95)) { 
+                    this.action = "進食"; this.move(0.75); this.findRes(); 
+                } else {
+                    if(this.age < 12) {
+                        let parent = villagers.find(v => v.id === this.motherId && v.hp > 0) || villagers.find(v => v.id === this.fatherId && v.hp > 0);
+                        if(parent) { this.action = "跟隨父母"; this.angle = Math.atan2(parent.y-this.y, parent.x-this.x); this.move(0.45); }
+                        else { this.move(0.3); }
+                    } else {
+                        this.action = "探索";
+                        this.move(this.personality === "積極" ? 0.6 : 0.4);
+                        this.socialCycle();
+                    }
+                }
+                if(this.hunger <= 0) this.hp -= 0.04;
+                if(this.age > 85) this.hp = 0; 
+                
+                // 處理死亡
+                if(this.hp <= 0) {
+                    this.hp = 0;
+                    deathCount++;
+                    syncBottomBar();
+                }
+            }
+
             socialCycle() {
                 villagers.forEach(o => {
                     if(o === this || o.hp <= 0) return;
@@ -237,6 +280,17 @@
             });
         }
 
+    window.castPlague = function() {
+            if (plagueZone) return; // 防止重複施放
+            plagueZone = {
+                x: Math.random() * (canvas.width - 200) + 100,
+                y: Math.random() * (canvas.height - 200) + 100,
+                r: 100,
+                start: Date.now()
+            };
+            setTimeout(() => { plagueZone = null; }, 5000); // 5秒後消失
+        };
+
         function loop() {
             ctx.fillStyle = "#1e301e"; ctx.fillRect(0,0,canvas.width, canvas.height);
             environment.forEach(t => {
@@ -244,7 +298,17 @@
                 ctx.fillRect(t.x, t.y, TILE_SIZE-1, TILE_SIZE-1);
             });
 
-// 世界時鐘更新
+// 繪製天罰毒霧
+            if (plagueZone) {
+                let pulse = Math.sin(Date.now() / 200) * 10;
+                ctx.fillStyle = "rgba(0, 255, 0, 0.2)";
+                ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, plagueZone.r + pulse, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = "rgba(0, 255, 0, 0.5)"; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, plagueZone.r + pulse + 5, 0, Math.PI*2); ctx.stroke();
+                ctx.fillStyle = "#0f0"; ctx.font = "bold 14px Arial"; ctx.fillText("⚠ 瘟疫爆發", plagueZone.x - 35, plagueZone.y - plagueZone.r - 20);
+            }
+            
+// 世界時鐘
             totalMinutes += 0.05;
             let mins = Math.floor(totalMinutes % 60);
             let hrs = Math.floor((totalMinutes / 60) % 24);
@@ -252,7 +316,12 @@
             let mths = Math.floor((totalMinutes / (60 * 24 * 30)) % 12) + 1;
             let yrs = Math.floor(totalMinutes / (60 * 24 * 30 * 12)) + 1;
             timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 ${days} 日 ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
-          
+
+            let aliveV = villagers.filter(v => v.hp > 0);
+            popStatsDisplay.innerText = `人口：${aliveV.length} (男: ${aliveV.filter(v=>v.gender==="男").length} | 女: ${aliveV.filter(v=>v.gender==="女").length})`;
+            deathStatsDisplay.innerText = `累積死亡：${deathCount}`;
+
+            villagers.forEach(v => { v.update(); v.draw(); });
             
             let aliveBefore = villagers.filter(v => v.hp > 0).length;
             villagers.forEach(v => { v.update(); v.draw(); });
