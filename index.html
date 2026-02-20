@@ -2,60 +2,62 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld - 創世四人組</title>
+    <title>Underworld V1.3 - 生態與生理演化</title>
     <style>
-        body { margin: 0; background: #222; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: white; }
+        body { margin: 0; background: #1a1a1a; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: white; }
         #top-bar {
             position: absolute; top: 0; left: 0; right: 250px; height: 40px;
-            background: rgba(0,0,0,0.8); display: flex; align-items: center;
+            background: rgba(0,0,0,0.85); display: flex; align-items: center;
             justify-content: center; z-index: 50; border-bottom: 1px solid #444;
-            font-size: 1.1em; letter-spacing: 2px; color: #00ff00;
+            font-size: 1.1em; color: #00ff00; text-shadow: 0 0 5px #000;
         }
-        #game-container { position: relative; flex-grow: 1; height: 100vh; background: #2e4d2e; cursor: crosshair; }
-        canvas { display: block; margin-top: 40px; }
-        #god-panel { width: 250px; background: #1a1a1a; border-left: 2px solid #333; padding: 15px; z-index: 100; box-sizing: border-box; }
-        h2 { color: #ffd700; font-size: 1.2em; border-bottom: 1px solid #555; padding-bottom: 10px; }
-        .stat-group { margin-bottom: 15px; font-size: 0.9em; line-height: 1.6; }
-        button { width: 100%; padding: 10px; margin: 5px 0; cursor: pointer; background: #333; color: white; border: 1px solid #555; transition: 0.2s; }
+        #game-container { position: relative; flex-grow: 1; height: 100vh; overflow: hidden; }
+        canvas { display: block; }
+        #god-panel { width: 250px; background: #252525; border-left: 2px solid #444; padding: 15px; z-index: 100; box-sizing: border-box; }
+        h2 { color: #ffd700; font-size: 1.2em; border-bottom: 1px solid #555; padding-bottom: 10px; margin-top: 0; }
+        .stat-group { margin-bottom: 15px; font-size: 0.9em; line-height: 1.6; background: #333; padding: 10px; border-radius: 5px; }
+        button { width: 100%; padding: 10px; margin: 5px 0; cursor: pointer; background: #444; color: white; border: 1px solid #666; transition: 0.2s; border-radius: 4px; }
         button:hover { background: #555; border-color: #ffd700; }
-        button.danger { color: #ff6666; }
+        button.danger { color: #ff8888; }
         #status-window { 
-            position: absolute; width: 200px; background: rgba(0, 0, 0, 0.85); border: 1px solid #ffd700; 
+            position: absolute; width: 200px; background: rgba(0, 0, 0, 0.9); border: 1px solid #ffd700; 
             padding: 12px; display: none; pointer-events: none; border-radius: 8px; font-size: 0.9em; z-index: 1000;
         }
-        .bar { width: 100%; height: 6px; background: #444; margin: 5px 0; border-radius: 3px; }
-        .bar-fill { height: 100%; width: 0%; transition: width 0.3s; border-radius: 3px; }
+        .bar-label { font-size: 0.8em; margin-top: 5px; display: block; }
+        .bar { width: 100%; height: 6px; background: #444; margin: 2px 0 8px 0; border-radius: 3px; overflow: hidden; }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body>
 
-<div id="top-bar"><span id="world-time">載入中...</span></div>
+<div id="top-bar"><span id="world-time">載入系統中...</span></div>
 
 <div id="game-container">
     <canvas id="worldCanvas"></canvas>
     <div id="status-window">
         <strong id="v-name">村民</strong> <span id="v-gender" style="font-size: 0.8em;"></span><br>
-        <span id="v-action" style="color: #aaa;">觀察中...</span><hr>
-        生命值：<div class="bar"><div id="v-health" class="bar-fill" style="background: #4f4;"></div></div>
-        飽食度：<div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f44;"></div></div>
+        <span id="v-action" style="color: #00ff00;">狀態：觀察中</span><hr>
+        <span class="bar-label">生命 (Life)</span>
+        <div class="bar"><div id="v-health" class="bar-fill" style="background: #4f4;"></div></div>
+        <span class="bar-label">飽食 (Food)</span>
+        <div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f44;"></div></div>
+        <span class="bar-label">體力 (Energy)</span>
+        <div class="bar"><div id="v-energy" class="bar-fill" style="background: #4af;"></div></div>
     </div>
 </div>
 
 <div id="god-panel">
-    <h2>神之權限 (System)</h2>
+    <h2>管理介面 (UI)</h2>
     <div class="stat-group">
-        人口總數：<span id="pop-count">0</span><br>
-        文明資源：<span id="res-count">0</span>
+        人口：<span id="pop-count">0</span><br>
+        資源：<span id="res-count">0</span>
     </div>
-    <hr>
-    <h3>資源調度</h3>
-    <button onclick="dispatchResource('food')">投放聖餐 (+50)</button>
-    <button onclick="dispatchResource('wood')">賜予木材 (+50)</button>
-    <h3>災難管理</h3>
-    <button class="danger" onclick="triggerDisaster('lightning')">降下雷擊</button>
-    <button class="danger" onclick="triggerDisaster('famine')">開啟荒年</button>
-    <hr>
-    <button class="danger" style="margin-top:20px; border: 1px double #f66;" onclick="resetGame()">重置世界 (New Game)</button>
+    <h3>神蹟干預</h3>
+    <button onclick="dispatchResource('food')">投放大量糧食 (+50)</button>
+    <button onclick="dispatchResource('energy')">賦予全體精神 (+30)</button>
+    <h3>環境災害</h3>
+    <button class="danger" onclick="triggerDisaster('lightning')">天罰：雷擊</button>
+    <button class="danger" onclick="resetGame()">重啟文明 (Reset)</button>
 </div>
 
 <script>
@@ -67,131 +69,77 @@
     const statusWindow = document.getElementById('status-window');
 
     let villagers = [];
+    let worldTiles = [];
     let globalResources = 100;
     let selectedVillager = null;
-    let totalMinutes = 0;
+    let totalMinutes = 480; // 從早上 8 點開始
+    const TILE_SIZE = 50;
 
     function resize() {
         canvas.width = window.innerWidth - 250;
-        canvas.height = window.innerHeight - 40;
+        canvas.height = window.innerHeight;
+        generateEnvironment();
     }
     window.addEventListener('resize', resize);
-    resize();
+
+    // 隨機環境生成系統
+    function generateEnvironment() {
+        worldTiles = [];
+        const cols = Math.ceil(canvas.width / TILE_SIZE);
+        const rows = Math.ceil(canvas.height / TILE_SIZE);
+        for(let x=0; x<cols; x++) {
+            for(let y=0; y<rows; y++) {
+                let type = 'grass';
+                let rand = Math.random();
+                if(rand < 0.1) type = 'water'; // 10% 湖泊
+                else if(rand < 0.25) type = 'forest'; // 15% 森林
+                worldTiles.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: type});
+            }
+        }
+    }
 
     class Villager {
         constructor(x, y) {
-            this.x = x;
-            this.y = y;
-            // 每次建立時隨機分配性別
+            this.x = x; this.y = y;
             this.gender = Math.random() > 0.5 ? "男" : "女";
             this.name = (this.gender === "男" ? "亞當" : "夏娃") + "-" + Math.floor(Math.random() * 99);
             this.health = 100;
-            this.hunger = 100;
+            this.hunger = 80 + Math.random()*20;
+            this.energy = 80 + Math.random()*20;
             this.action = "漫步";
-            this.size = 14; 
-            this.speed = 0.4 + Math.random() * 0.3;
+            this.size = 15;
+            this.speed = 0.5;
             this.angle = Math.random() * Math.PI * 2;
         }
 
         update() {
-            if (Math.random() < 0.01) this.angle += (Math.random() - 0.5);
+            // 生理邏輯
+            this.hunger -= 0.015;
+            this.energy -= 0.01;
+
+            if (this.energy < 15) {
+                this.action = "睡眠中";
+                this.energy += 0.05; // 睡覺恢復體力
+                if (this.energy >= 100) this.energy = 100;
+                return; // 睡覺時不動
+            }
+
+            if (this.hunger < 40) {
+                this.action = "尋覓食物";
+                this.speed = 0.8;
+                // 邏輯簡化：飢餓時會朝向最近的森林移動 (此處僅模擬)
+            } else {
+                this.action = "漫步中";
+                this.speed = 0.5;
+            }
+
+            if (this.hunger <= 0) { this.hunger = 0; this.health -= 0.05; }
+
+            // 移動
+            if (Math.random() < 0.02) this.angle += (Math.random() - 0.5);
             this.x += Math.cos(this.angle) * this.speed;
             this.y += Math.sin(this.angle) * this.speed;
 
+            // 邊界與水域碰撞
             if (this.x < 20 || this.x > canvas.width - 20) this.angle = Math.PI - this.angle;
-            if (this.y < 20 || this.y > canvas.height - 20) this.angle = -this.angle;
-
-            this.hunger -= 0.015; 
-            if (this.hunger <= 0) { this.hunger = 0; this.health -= 0.04; }
-            this.action = this.hunger < 40 ? "尋找食物" : "漫步中";
-        }
-
-        draw() {
-            ctx.save();
-            if (selectedVillager === this) {
-                ctx.strokeStyle = "#fff";
-                ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size + 5, 0, Math.PI * 2); ctx.stroke();
-            }
-            // 男：淡藍，女：粉紅
-            ctx.fillStyle = (this.gender === "男") ? "#7ebce6" : "#f2a7b5";
-            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-            ctx.restore();
-        }
-    }
-
-    function initGame() {
-        villagers = [];
-        globalResources = 100;
-        totalMinutes = 0;
-        selectedVillager = null;
-        statusWindow.style.display = 'none';
-        for(let i=0; i<4; i++) {
-            villagers.push(new Villager(Math.random()*canvas.width, Math.random()*canvas.height));
-        }
-    }
-
-    function resetGame() {
-        if(confirm("確定要重置這個世界嗎？所有的文明紀錄將會消失。")) initGame();
-    }
-
-    function loop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        totalMinutes++;
-        let days = Math.floor(totalMinutes / 1440) + 1;
-        let hrs = Math.floor((totalMinutes % 1440) / 60);
-        let mins = totalMinutes % 60;
-        timeDisplay.innerText = `世界日期：第 ${days} 天 ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
-
-        villagers = villagers.filter(v => v.health > 0);
-        villagers.forEach(v => { v.update(); v.draw(); });
-
-        popDisplay.innerText = villagers.length;
-        resDisplay.innerText = Math.floor(globalResources);
-        if (selectedVillager) updateStatusWindow();
-        requestAnimationFrame(loop);
-    }
-
-    canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - (rect.top + 40);
-        let found = villagers.find(v => Math.hypot(v.x - mouseX, v.y - mouseY) < 30);
-        if (found) {
-            selectedVillager = found;
-            statusWindow.style.display = 'block';
-            statusWindow.style.left = (e.clientX + 15) + 'px';
-            statusWindow.style.top = (e.clientY + 15) + 'px';
-        } else {
-            selectedVillager = null;
-            statusWindow.style.display = 'none';
-        }
-    });
-
-    function updateStatusWindow() {
-        document.getElementById('v-name').innerText = selectedVillager.name;
-        document.getElementById('v-gender').innerText = `(${selectedVillager.gender})`;
-        document.getElementById('v-action').innerText = selectedVillager.action;
-        document.getElementById('v-health').style.width = selectedVillager.health + '%';
-        document.getElementById('v-hunger').style.width = selectedVillager.hunger + '%';
-    }
-
-    function dispatchResource(type) {
-        globalResources += 50;
-        if(type === 'food') villagers.forEach(v => v.hunger = Math.min(100, v.hunger + 40));
-    }
-
-    function triggerDisaster(type) {
-        if(type === 'lightning' && villagers.length > 0) {
-            const targetIdx = Math.floor(Math.random() * villagers.length);
-            villagers[targetIdx].health = 0;
-        } else if(type === 'famine') {
-            villagers.forEach(v => v.hunger = Math.max(0, v.hunger - 40));
-        }
-    }
-
-    initGame();
-    loop();
-</script>
-</body>
-</html>
+            if (this.y < 60 || this.y > canvas.height - 20) this.angle = -
