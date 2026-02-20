@@ -1,9 +1,10 @@
-/* script.js - V9.6 視覺校正版 */
+/* script.js - V9.7 引擎校正版 */
 
 window.onload = function() {
     const canvas = document.getElementById('worldCanvas');
     window.cvsGlobal = canvas;
     const ctx = canvas.getContext('2d');
+    const timeDisplay = document.getElementById('world-time');
     
     function init() {
         villagers = []; environment = []; genCounters = {}; selectedId = null; matchId = null; totalMinutes = 0; deathCount = 0; gracePoints = CONFIG.INITIAL_GRACE;
@@ -19,36 +20,35 @@ window.onload = function() {
         syncBottomBar();
     }
 
-    // --- 神權按鈕與功能按鈕 ---
+    // --- 神權函數 ---
     window.castMiracle = (t) => {
         if (t === 'food') {
-            if (gracePoints < CONFIG.COST_FOOD) { alert(`神恩不足 (${CONFIG.COST_FOOD}pt)`); return; }
+            if (gracePoints < CONFIG.COST_FOOD) { alert(`點數不足`); return; }
             updateGrace(-CONFIG.COST_FOOD); villagers.forEach(v => { if(v.hp > 0) v.hunger = 100; });
-            addNotice("✨ 神蹟：全體飽足。");
         } else {
             if (!selectedId) { alert("請先選中小人！"); return; }
-            if (gracePoints < CONFIG.COST_ENERGY) { alert(`神恩不足 (${CONFIG.COST_ENERGY}pt)`); return; }
+            if (gracePoints < CONFIG.COST_ENERGY) { alert(`點數不足`); return; }
             let v = villagers.find(v => v.id === selectedId && v.hp > 0);
-            if (v) { updateGrace(-CONFIG.COST_ENERGY); v.hp = v.maxHp; v.plagueTimer = 0; v.evolveRandomStat(true); syncBottomBar(); }
+            if (v) { updateGrace(-CONFIG.COST_ENERGY); v.hp = v.maxHp; v.evolveRandomStat(true); syncBottomBar(); }
         }
     };
 
     window.castLoveMiracle = () => {
-        if (!selectedId) { alert("請點擊目標！"); return; }
-        if (gracePoints < CONFIG.COST_LOVE) { alert(`神恩不足 (${CONFIG.COST_LOVE}pt)`); return; }
+        if (!selectedId) return;
+        if (gracePoints < CONFIG.COST_LOVE) { alert(`點數不足`); return; }
         if (!matchId) { matchId = selectedId; addNotice(`🔮 預言：選中命定之人。`); }
         else {
             if (matchId === selectedId) { matchId = null; return; }
             let v1 = villagers.find(v => v.id === matchId && v.hp > 0), v2 = villagers.find(v => v.id === selectedId && v.hp > 0);
-            if (v1 && v2) { updateGrace(-CONFIG.COST_LOVE); v1.rels[v2.id] = { score: 100, type: '戀人', name: v2.name }; v2.rels[v1.id] = { score: 100, type: '戀人', name: v1.name }; v1.reproduce(v2); addNotice(`❤️ 神蹟：強行結合。`); }
+            if (v1 && v2) { updateGrace(-CONFIG.COST_LOVE); v1.rels[v2.id] = { score: 100, type: '戀人', name: v2.name }; v2.rels[v1.id] = { score: 100, type: '戀人', name: v1.name }; v1.reproduce(v2); }
             matchId = null;
         }
     };
 
-    window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; addNotice("⚠️ 天罰爆發！", "notice-death"); setTimeout(()=>plagueZone=null, 5000); };
+    window.castPlague = () => { plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; setTimeout(()=>plagueZone=null, 5000); };
     window.resetWorld = () => { if(confirm("重啟？")) init(); };
 
-    // --- 主循環 ---
+    // --- 核心繪製與 UI 更新循環 ---
     function loop() {
         ctx.fillStyle = "#1e301e"; ctx.fillRect(0,0,canvas.width, canvas.height);
         environment.forEach(t => { ctx.fillStyle = (t.type === 'water' ? "#2a5a7a" : (t.type === 'forest' ? "#145a32" : "#2d4a2d")); ctx.fillRect(t.x, t.y, TILE_SIZE-1, TILE_SIZE-1); });
@@ -57,7 +57,7 @@ window.onload = function() {
         totalMinutes += CONFIG.GAME_SPEED; 
         if (Math.floor(totalMinutes/CONFIG.MINS_IN_YEAR) > oldY) updateGrace(CONFIG.YEARLY_GRACE);
 
-        // 年月日時分計算
+        // 時間計算
         let yrs = Math.floor(totalMinutes / CONFIG.MINS_IN_YEAR) + 1;
         let remM = totalMinutes % CONFIG.MINS_IN_YEAR;
         let mths = Math.floor(remM / CONFIG.MINS_IN_MONTH) + 1;
@@ -65,7 +65,7 @@ window.onload = function() {
         let days = Math.floor(remD / CONFIG.MINS_IN_DAY) + 1;
         let hrs = Math.floor((remD % CONFIG.MINS_IN_DAY) / 60);
         let mins = Math.floor(remD % 60);
-        document.getElementById('world-time').innerText = `世界曆 第 ${yrs}年 ${mths}月 ${days}日 | ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
+        timeDisplay.innerText = `世界曆 第 ${yrs}年 ${mths}月 ${days}日 | ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
 
         let aliveV = villagers.filter(v => v.hp > 0);
         document.getElementById('pop-stats').innerText = `人口：${aliveV.length} (男: ${aliveV.filter(v=>v.gender=="男").length} | 女: ${aliveV.filter(v=>v.gender=="女").length})`;
@@ -73,26 +73,34 @@ window.onload = function() {
         
         villagers.forEach(v => { v.update(); v.draw(ctx); });
         
+        // --- 修正：防崩潰狀態欄更新 ---
         if(selectedId) {
             let v = villagers.find(v => v.id === selectedId);
             if(v && v.hp > 0) {
                 document.getElementById('v-name').innerText = (v.isHero?"✨ ":"") + v.name;
                 document.getElementById('v-age').innerText = Math.floor(v.age)+"歲";
                 document.getElementById('v-personality').innerText = "性格："+v.personality;
-                document.getElementById('v-father').innerText = v.father; document.getElementById('v-mother').innerText = v.mother;
+                document.getElementById('v-father').innerText = v.father; 
+                document.getElementById('v-mother').innerText = v.mother;
                 
-                // 核心修復：使用 v.str 確保 UI 顯示
-                let s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
+                const s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
                 document.getElementById('attr-str').innerHTML = `力量 (STR): ${v.str} <span class="attr-label ${s.cls}">(${s.txt})</span>`;
                 document.getElementById('attr-con').innerHTML = `體質 (CON): ${v.con} <span class="attr-label ${c.cls}">(${c.txt})</span>`;
                 document.getElementById('attr-siz').innerHTML = `體型 (SIZ): ${v.siz} <span class="attr-label ${z.cls}">(${z.txt})</span>`;
                 document.getElementById('attr-dex').innerHTML = `敏捷 (DEX): ${v.dex} <span class="attr-label ${d.cls}">(${d.txt})</span>`;
                 
                 let hpP = Math.floor(v.hp/v.maxHp*100), fdP = Math.floor(v.hunger);
-                document.getElementById('v-health').style.width = hpP+'%'; document.getElementById('v-hunger').style.width = fdP+'%';
-                document.getElementById('hp-txt').innerText = hpP + '%'; document.getElementById('fd-txt').innerText = fdP+'%';
+                document.getElementById('v-health').style.width = hpP+'%'; 
+                document.getElementById('v-hunger').style.width = fdP+'%';
+                document.getElementById('hp-txt').innerText = hpP + '%'; 
+                document.getElementById('fd-txt').innerText = fdP+'%';
+                
                 let g = { '❤️ 戀人': [], '👪 家族': [], '🤝 朋友': [] }, h = '';
-                Object.values(v.rels).forEach(r => { if(g[r.type]) g[r.type].push(r.name); });
+                Object.values(v.rels).forEach(r => { 
+                    if (['父親','母親','子女'].includes(r.type)) g['👪 家族'].push(r.name);
+                    else if (r.type === '戀人') g['❤️ 戀人'].push(r.name);
+                    else if (r.type === '朋友') g['🤝 朋友'].push(r.name);
+                });
                 for (let [t, ns] of Object.entries(g)) { if(ns.length > 0) { h += `<div class="rel-header">${t}</div><div class="rel-tags">${ns.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>`; }}
                 document.getElementById('v-social-box').innerHTML = h || '暫無社交';
             } else { selectedId = null; document.getElementById('status-window').style.display = 'none'; syncBottomBar(); }
@@ -100,12 +108,12 @@ window.onload = function() {
         requestAnimationFrame(loop);
     }
 
-    // 核心修復：更精準的畫布點擊判定 (校準座標)
+    // --- 修正：座標偏移判定 (解決點不到球的問題) ---
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
-        let found = villagers.find(v => Math.hypot(v.x - clickX, v.y - clickY) < 25 && v.hp > 0);
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        let found = villagers.find(v => Math.hypot(v.x - mouseX, v.y - mouseY) < 25 && v.hp > 0);
         if(found) { selectedId = found.id; document.getElementById('status-window').style.display = 'block'; syncBottomBar(); } 
         else { selectedId = null; document.getElementById('status-window').style.display = 'none'; syncBottomBar(); }
     });
@@ -123,8 +131,9 @@ function updateGrace(amount, reason = "") {
 function addNotice(msg, typeClass = "") {
     const noticeBoard = document.getElementById('notice-board');
     if (!noticeBoard) return;
+    let yrs = Math.floor(totalMinutes/CONFIG.MINS_IN_YEAR)+1;
     let div = document.createElement('div');
-    div.innerHTML = `<span class="notice-time">${Math.floor(totalMinutes/CONFIG.MINS_IN_MONTH)+1}月</span> <span class="${typeClass}">${msg}</span>`;
+    div.innerHTML = `<span class="notice-time">${yrs}年</span> <span class="${typeClass}">${msg}</span>`;
     noticeBoard.prepend(div);
     if (noticeBoard.childNodes.length > 50) noticeBoard.removeChild(noticeBoard.lastChild);
 }
@@ -155,12 +164,15 @@ function syncBottomBar() {
     genTabs.innerHTML = '';
     gens.forEach(g => {
         let btn = document.createElement('div'); btn.className = `tab-btn ${currentTab == g ? 'active' : ''}`;
-        btn.innerText = g == 'All' ? '全部' : `G${g}`; btn.onclick = (e) => { e.stopPropagation(); currentTab = g; syncBottomBar(); }; genTabs.appendChild(btn);
+        btn.innerText = g == 'All' ? '全部' : `G${g}`; 
+        btn.onclick = (e) => { e.stopPropagation(); currentTab = g; syncBottomBar(); }; 
+        genTabs.appendChild(btn);
     });
     bottomBar.innerHTML = '';
     aliveV.filter(v => currentTab == 'All' || v.gen == currentTab).forEach(v => {
         let btn = document.createElement('div'); btn.className = `v-btn ${v.gender==="男"?"male":"female"} ${selectedId===v.id?"selected":""}`;
-        btn.innerText = (v.isHero?"✨":"")+(v.isElder?"👑":"")+v.name; btn.onclick = (e) => { e.stopPropagation(); selectedId = v.id; document.getElementById('status-window').style.display = 'block'; syncBottomBar(); };
+        btn.innerText = (v.isHero?"✨":"")+(v.isElder?"👑":"")+v.name; 
+        btn.onclick = (e) => { e.stopPropagation(); selectedId = v.id; document.getElementById('status-window').style.display = 'block'; syncBottomBar(); };
         bottomBar.appendChild(btn);
     });
 }
