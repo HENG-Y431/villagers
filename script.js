@@ -1,4 +1,5 @@
 /* script.js - 世界引擎：UI、時間與神權 */
+
 window.onload = function() {
     const canvas = document.getElementById('worldCanvas');
     window.cvsGlobal = canvas;
@@ -18,7 +19,7 @@ window.onload = function() {
         syncBottomBar();
     }
 
-    // 神權操作邏輯與主循環...
+    // 神權操作邏輯
     window.castMiracle = (t) => {
         if (t === 'food') {
             if (gracePoints < CONFIG.COST_FOOD) { alert(`神恩不足 (${CONFIG.COST_FOOD}pt)`); return; }
@@ -55,7 +56,7 @@ window.onload = function() {
         totalMinutes += CONFIG.GAME_SPEED; 
         if (Math.floor(totalMinutes/CONFIG.MINS_IN_YEAR) > oldY) updateGrace(CONFIG.YEARLY_GRACE);
 
-        // --- 修正：年月日時分詳細計算 ---
+        // --- 修正：年月日精確計算 ---
         let yrs = Math.floor(totalMinutes / CONFIG.MINS_IN_YEAR) + 1;
         let remM = totalMinutes % CONFIG.MINS_IN_YEAR;
         let mths = Math.floor(remM / CONFIG.MINS_IN_MONTH) + 1;
@@ -82,17 +83,23 @@ window.onload = function() {
                 document.getElementById('v-elder-tag').style.display = (v.isElder || v.isHero) ? 'block' : 'none';
                 document.getElementById('v-personality').innerText = "性格："+v.personality;
                 document.getElementById('v-father').innerText = v.father; document.getElementById('v-mother').innerText = v.mother;
+                
                 let s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
+                // --- 修正：屬性文字徹底去重 ---
                 document.getElementById('attr-str').innerHTML = `力量 (STR): ${v.str} <span class="attr-label ${s.cls}">(${s.txt})</span>`;
                 document.getElementById('attr-con').innerHTML = `體質 (CON): ${v.con} <span class="attr-label ${c.cls}">(${c.txt})</span>`;
                 document.getElementById('attr-siz').innerHTML = `體型 (SIZ): ${v.siz} <span class="attr-label ${z.cls}">(${z.txt})</span>`;
                 document.getElementById('attr-dex').innerHTML = `敏捷 (DEX): ${v.dex} <span class="attr-label ${d.cls}">(${d.txt})</span>`;
+                
                 let hpP = Math.floor(v.hp/v.maxHp*100), fdP = Math.floor(v.hunger);
                 document.getElementById('v-health').style.width = hpP+'%'; document.getElementById('v-hunger').style.width = fdP+'%';
                 document.getElementById('hp-txt').innerText = hpP + '%'; document.getElementById('fd-txt').innerText = fdP+'%';
+                
                 let g = { '❤️ 戀人': [], '👪 家族': [], '🤝 朋友': [] }, h = '';
                 Object.values(v.rels).forEach(r => { if(g[r.type]) g[r.type].push(r.name); });
-                for (let [t, ns] of Object.entries(g)) { if(ns.length > 0) { h += `<div class="rel-header">${t}</div><div class="rel-tags">${ns.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>`; }}
+                for (let [t, ns] of Object.entries(g)) { if(ns.length > 0) {
+                    h += `<div class="rel-header">${t}</div><div class="rel-tags">${ns.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>`;
+                }}
                 document.getElementById('v-social-box').innerHTML = h || '暫無社交';
             } else { selectedId = null; document.getElementById('status-window').style.display = 'none'; syncBottomBar(); }
         }
@@ -101,6 +108,7 @@ window.onload = function() {
     init(); loop();
 };
 
+const TILE_SIZE = 45;
 function updateGrace(amount, reason = "") {
     gracePoints += amount;
     const graceDisplay = document.getElementById('grace-points');
