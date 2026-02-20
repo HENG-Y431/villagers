@@ -1,4 +1,4 @@
-/* script.js - V9.7 引擎校正版 */
+/* script.js - V9.8 引擎校準版 */
 
 window.onload = function() {
     const canvas = document.getElementById('worldCanvas');
@@ -20,7 +20,7 @@ window.onload = function() {
         syncBottomBar();
     }
 
-    // --- 神權函數 ---
+    // 神權函數
     window.castMiracle = (t) => {
         if (t === 'food') {
             if (gracePoints < CONFIG.COST_FOOD) { alert(`點數不足`); return; }
@@ -46,9 +46,8 @@ window.onload = function() {
     };
 
     window.castPlague = () => { plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; setTimeout(()=>plagueZone=null, 5000); };
-    window.resetWorld = () => { if(confirm("重啟？")) init(); };
+    window.resetWorld = () => { if(confirm("重啟文明？")) init(); };
 
-    // --- 核心繪製與 UI 更新循環 ---
     function loop() {
         ctx.fillStyle = "#1e301e"; ctx.fillRect(0,0,canvas.width, canvas.height);
         environment.forEach(t => { ctx.fillStyle = (t.type === 'water' ? "#2a5a7a" : (t.type === 'forest' ? "#145a32" : "#2d4a2d")); ctx.fillRect(t.x, t.y, TILE_SIZE-1, TILE_SIZE-1); });
@@ -57,7 +56,6 @@ window.onload = function() {
         totalMinutes += CONFIG.GAME_SPEED; 
         if (Math.floor(totalMinutes/CONFIG.MINS_IN_YEAR) > oldY) updateGrace(CONFIG.YEARLY_GRACE);
 
-        // 時間計算
         let yrs = Math.floor(totalMinutes / CONFIG.MINS_IN_YEAR) + 1;
         let remM = totalMinutes % CONFIG.MINS_IN_YEAR;
         let mths = Math.floor(remM / CONFIG.MINS_IN_MONTH) + 1;
@@ -73,12 +71,13 @@ window.onload = function() {
         
         villagers.forEach(v => { v.update(); v.draw(ctx); });
         
-        // --- 修正：防崩潰狀態欄更新 ---
         if(selectedId) {
             let v = villagers.find(v => v.id === selectedId);
             if(v && v.hp > 0) {
                 document.getElementById('v-name').innerText = (v.isHero?"✨ ":"") + v.name;
-                document.getElementById('v-age').innerText = Math.floor(v.age)+"歲";
+                // --- 修正：確保年齡顯示不為 NaN ---
+                const displayAge = isNaN(v.age) ? 0 : Math.floor(v.age);
+                document.getElementById('v-age').innerText = displayAge + "歲";
                 document.getElementById('v-personality').innerText = "性格："+v.personality;
                 document.getElementById('v-father').innerText = v.father; 
                 document.getElementById('v-mother').innerText = v.mother;
@@ -95,20 +94,22 @@ window.onload = function() {
                 document.getElementById('hp-txt').innerText = hpP + '%'; 
                 document.getElementById('fd-txt').innerText = fdP+'%';
                 
+                // --- 核心修正：社交分組邏輯 ---
                 let g = { '❤️ 戀人': [], '👪 家族': [], '🤝 朋友': [] }, h = '';
                 Object.values(v.rels).forEach(r => { 
                     if (['父親','母親','子女'].includes(r.type)) g['👪 家族'].push(r.name);
                     else if (r.type === '戀人') g['❤️ 戀人'].push(r.name);
                     else if (r.type === '朋友') g['🤝 朋友'].push(r.name);
                 });
-                for (let [t, ns] of Object.entries(g)) { if(ns.length > 0) { h += `<div class="rel-header">${t}</div><div class="rel-tags">${ns.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>`; }}
+                for (let [t, ns] of Object.entries(g)) { 
+                    if(ns.length > 0) { h += `<div class="rel-header">${t}</div><div class="rel-tags">${ns.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>`; }
+                }
                 document.getElementById('v-social-box').innerHTML = h || '暫無社交';
             } else { selectedId = null; document.getElementById('status-window').style.display = 'none'; syncBottomBar(); }
         }
         requestAnimationFrame(loop);
     }
 
-    // --- 修正：座標偏移判定 (解決點不到球的問題) ---
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -148,9 +149,9 @@ function isDirectLineage(v1, v2, depth = 1) {
 }
 function getCoC6Label(val) {
     if (val <= 5) return { txt: "嚴重缺陷", cls: "rank-poor" };
-    if (val <= 7) return { txt: "非常不良", cls: "rank-poor" };
+    if (val <= 7) return { txt: "不良", cls: "rank-poor" };
     if (val <= 9) return { txt: "稍弱", cls: "" };
-    if (val <= 11) return { txt: "正常人", cls: "" };
+    if (val <= 11) return { txt: "正常", cls: "" };
     if (val <= 13) return { txt: "優秀", cls: "rank-good" };
     if (val <= 15) return { txt: "超群", cls: "rank-good" };
     return { txt: "稀有", cls: "rank-rare" };
