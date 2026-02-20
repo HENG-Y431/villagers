@@ -2,57 +2,28 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V6.2 </title>
-    <style>
-        body { margin: 0; background: #121212; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: #e0e0e0; }
-        #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #daa520; color: #00ff00; font-weight: bold; font-size: 0.9em; }
-        #game-container { position: relative; flex-grow: 1; height: 100vh; background: #1a1a1a; }
-        canvas { display: block; }
-
-        /* 底部導航 */
-        #admin-footer { position: absolute; bottom: 0; left: 0; right: 280px; height: 95px; background: rgba(20, 20, 20, 0.95); border-top: 2px solid #444; display: flex; flex-direction: column; z-index: 60; }
-        #gen-tabs { display: flex; background: #222; padding: 2px 10px; gap: 5px; border-bottom: 1px solid #333; overflow-x: auto; }
-        .tab-btn { padding: 2px 8px; font-size: 0.7em; cursor: pointer; background: #333; color: #aaa; border: 1px solid #444; border-radius: 3px 3px 0 0; }
-        .tab-btn.active { background: #daa520; color: #000; font-weight: bold; }
-        #bottom-bar { display: flex; align-items: center; padding: 10px 15px; gap: 8px; overflow-x: auto; flex-grow: 1; }
-        #bottom-bar::-webkit-scrollbar { height: 8px; }
-        #bottom-bar::-webkit-scrollbar-thumb { background: #daa520; border-radius: 4px; }
-        .v-btn { padding: 6px 12px; background: #333; border: 1px solid #555; border-radius: 4px; color: #fff; cursor: pointer; white-space: nowrap; font-size: 0.75em; font-weight: bold; flex-shrink: 0; }
-        .v-btn.selected { border-color: #00ff00; box-shadow: 0 0 8px #00ff00; }
-        .v-btn.male { border-left: 3px solid #3498db; }
-        .v-btn.female { border-left: 3px solid #e84393; }
-
-        /* 右側面板 */
-        #god-panel { width: 280px; background: #1e1e1e; border-left: 2px solid #333; padding: 12px; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; }
-        .stat-card { background: #2d2d2d; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #444; font-size: 0.8em; color: #ffd700; }
-        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
-        button { padding: 6px 2px; cursor: pointer; background: #3d3d3d; color: white; border: 1px solid #555; transition: 0.2s; border-radius: 4px; font-weight: bold; font-size: 0.75em; }
-        button:hover { background: #daa520; color: #000; }
-
-        #status-window { margin-top: auto; background: #000; border: 1px solid #daa520; padding: 12px; display: none; border-radius: 8px; font-size: 0.8em; }
-        
-        /* 關係面板分類 */
-        #v-social-container { max-height: 110px; overflow-y: auto; margin: 8px 0; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 5px 0; }
-        #v-social-container::-webkit-scrollbar { width: 4px; }
-        #v-social-container::-webkit-scrollbar-thumb { background: #444; }
-        .rel-group { margin: 5px 0; }
-        .rel-header { font-size: 0.7em; font-weight: bold; margin-bottom: 2px; }
-        .rel-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-        .rel-tag { font-size: 0.7em; padding: 1px 4px; border-radius: 3px; background: #222; border: 1px solid #444; }
-        .type-lover { color: #ff69b4; } .type-family { color: #999; } .type-friend { color: #3498db; } .type-mentor { color: #9b59b6; }
-
-        .attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.7em; color: #aaa; }
-        .bar { width: 100%; height: 5px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; }
-        .bar-fill { height: 100%; transition: width 0.3s; }
-    </style>
+    <title>Underworld V6.4 </title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div id="top-bar">世界時間：<span id="world-time">載入中...</span></div>
-<div id="game-container"><canvas id="worldCanvas"></canvas><div id="admin-footer"><div id="gen-tabs"></div><div id="bottom-bar"></div></div></div>
+
+<div id="game-container">
+    <canvas id="worldCanvas"></canvas>
+    <div id="admin-footer">
+        <div id="gen-tabs"></div>
+        <div id="bottom-bar"></div>
+    </div>
+</div>
+
 <div id="god-panel">
     <h3>部落人口普查</h3>
-    <div class="stat-card"><div id="pop-stats">人口：0 (男: 0 | 女: 0)</div><div id="death-stats" style="color: #ff4d4d; margin-top: 5px;">累積死亡：0</div></div>
+    <div class="stat-card">
+        <div id="pop-stats">人口：0 (男: 0 | 女: 0)</div>
+        <div id="death-stats" style="color: #ff4d4d; margin-top: 5px;">累積死亡：0</div>
+    </div>
+    
     <h3>神權干預</h3>
     <div class="btn-grid">
         <button onclick="castMiracle('food')">投放聖餐</button>
@@ -60,72 +31,19 @@
         <button style="color:#ff4d4d;" onclick="castPlague()">天罰災厄</button>
         <button onclick="resetWorld()" style="color:#aaa;">重啟世界</button>
     </div>
+
     <div id="status-window">
         <div style="display: flex; justify-content: space-between; align-items: center;"><strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong><span id="v-age" style="color: #4caf50;">0 歲</span></div>
         <div id="v-elder-tag" style="color: #ffd700; font-size: 0.8em; font-weight: bold; margin-bottom: 2px; display: none;">✨ 部落長老 ✨</div>
         <div id="v-personality" style="color: #00ff00; font-size: 0.8em; font-weight: bold; margin: 2px 0;">性格：載入中</div>
         <div style="font-size:0.75em; color:#888; border-bottom:1px solid #333; padding-bottom:4px;">父：<span id="v-father">無</span> | 母：<span id="v-mother">無</span></div>
-        
-        <div id="v-social-container"></div>
-
+        <div id="v-social-box"></div>
         <div class="attr-grid"><span>STR: <b id="attr-str"></b></span> <span>CON: <b id="attr-con"></b></span><span>SIZ: <b id="attr-siz"></b></span> <span>DEX: <b id="attr-dex"></b></span></div>
         <div style="margin-top:8px;"><div style="display:flex; justify-content:space-between; font-size:0.7em; color:#999;"><span>天命 (HP)</span><span id="hp-txt">100%</span></div><div class="bar"><div id="v-health" class="bar-fill" style="background: #e74c3c;"></div></div></div>
         <div style="margin-top:6px;"><div style="display:flex; justify-content:space-between; font-size:0.7em; color:#999;"><span>飽食 (Food)</span><span id="fd-txt">100%</span></div><div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div></div>
     </div>
 </div>
 
-<script>
-    let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
-    let deathCount = 0, currentTab = 'All', plagueZone = null;
-    const TILE_SIZE = 45, SOCIAL_RANGE = 80, MINS_IN_YEAR = 60 * 24 * 30 * 12;
-
-    window.onload = function() {
-        const canvas = document.getElementById('worldCanvas');
-        const ctx = canvas.getContext('2d');
-        const timeDisplay = document.getElementById('world-time');
-        const bottomBar = document.getElementById('bottom-bar');
-        const genTabs = document.getElementById('gen-tabs');
-        const statusWindow = document.getElementById('status-window');
-        const socialContainer = document.getElementById('v-social-container');
-
-        function getSerial(gen, gender) {
-            if (!genCounters[gen]) genCounters[gen] = { m: 1, f: 2 };
-            let s = (gender === "男") ? genCounters[gen].m : genCounters[gen].f;
-            if (gender === "男") genCounters[gen].m += 2; else genCounters[gen].f += 2;
-            return s.toString().padStart(2, '0');
-        }
-
-        function init() {
-            villagers = []; environment = []; genCounters = {}; selectedId = null; totalMinutes = 0; deathCount = 0; plagueZone = null;
-            canvas.width = window.innerWidth - 280; canvas.height = window.innerHeight;
-            const cols = Math.ceil(canvas.width / TILE_SIZE), rows = Math.ceil(canvas.height / TILE_SIZE);
-            for(let x=0; x<cols; x++) {
-                for(let y=0; y<rows; y++) {
-                    let r = Math.random();
-                    environment.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: (r < 0.08 ? 'water' : (r < 0.22 ? 'forest' : 'grass'))});
-                }
-            }
-            // 始祖 4 人身兼長老
-            for(let i=0; i<4; i++) {
-                let v = new Villager(canvas, 1, (i < 2 ? "男" : "女"), false, null, null, "無", "無", null, null, 20);
-                v.isElder = true;
-                villagers.push(v);
-            }
-            syncBottomBar();
-        }
-
-        class Villager {
-            constructor(cvs, gen, gender, isBaby = false, x = null, y = null, fName = "無", mName = "無", fId = null, mId = null, startAge = 0) {
-                this.id = Math.random().toString(36).substr(2, 9);
-                this.gen = gen; this.gender = gender; this.serial = getSerial(gen, gender);
-                this.name = `${this.gen}-${this.serial}`;
-                this.x = x || cvs.width/2 + (Math.random()-0.5)*200;
-                this.y = y || cvs.height/2 + (Math.random()-0.5)*200;
-                this.father = fName; this.mother = mName;
-                this.fatherId = fId; this.motherId = mId;
-                this.birthTime = totalMinutes - (startAge * MINS_IN_YEAR);
-                this.age = startAge;
-                this.str = 3 + Math.floor(Math.random()*16); this.con = 3 + Math.floor(Math.random()*16);
-                this.siz = 8 + Math.floor(Math.random()*11); this.dex = 3 + Math.floor(Math.random()*16);
-                this.personality = (this.str + this.dex > 25) ? "積極" : (this.con < 10 ? "懶惰" : "普通");
-                this.max
+<script src="script.js"></script>
+</body>
+</html>
