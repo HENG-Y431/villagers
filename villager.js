@@ -29,6 +29,9 @@ class Villager {
         this.hp = this.maxHp; this.hunger = 80; this.rels = {}; 
         this.mateCooldown = 0; this.isElder = false; this.plagueTimer = 0;
         this.angle = Math.random()*Math.PI*2;
+        
+    // --- 修正：始祖長老初始冷卻設為約 1 年 (2073 幀) ---
+        this.mateCooldown = isBaby ? 0 : 2100; 
     }
 
     checkHero() {
