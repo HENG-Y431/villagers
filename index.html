@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V5.5 </title>
+    <title>Underworld V5.7 </title>
     <style>
         body { margin: 0; background: #121212; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: #e0e0e0; }
         #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #daa520; color: #00ff00; font-weight: bold; font-size: 0.9em; }
@@ -59,6 +59,7 @@
     let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
     let deathCount = 0, currentTab = 'All', plagueZone = null;
     const TILE_SIZE = 45, SOCIAL_RANGE = 80;
+    const MINS_IN_YEAR = 60 * 24 * 30 * 12;
 
     window.onload = function() {
         const canvas = document.getElementById('worldCanvas');
@@ -85,12 +86,12 @@
                     environment.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: (r < 0.08 ? 'water' : (r < 0.22 ? 'forest' : 'grass'))});
                 }
             }
-            for(let i=0; i<4; i++) { villagers.push(new Villager(canvas, 1, (i < 2 ? "男" : "女"))); }
+            for(let i=0; i<4; i++) { villagers.push(new Villager(canvas, 1, (i < 2 ? "男" : "女"), false, null, null, "無", "無", null, null, 20)); }
             syncBottomBar();
         }
 
         class Villager {
-            constructor(cvs, gen, gender, isBaby = false, x = null, y = null, fName = "無", mName = "無", fId = null, mId = null) {
+            constructor(cvs, gen, gender, isBaby = false, x = null, y = null, fName = "無", mName = "無", fId = null, mId = null, startAge = 0) {
                 this.id = Math.random().toString(36).substr(2, 9);
                 this.gen = gen; this.gender = gender; this.serial = getSerial(gen, gender);
                 this.name = `${this.gen}-${this.serial}`;
@@ -98,10 +99,12 @@
                 this.y = y || cvs.height/2 + (Math.random()-0.5)*200;
                 this.father = fName; this.mother = mName;
                 this.fatherId = fId; this.motherId = mId;
+                this.birthTime = totalMinutes - (startAge * MINS_IN_YEAR);
+                this.age = startAge;
                 this.str = 3 + Math.floor(Math.random()*16); this.con = 3 + Math.floor(Math.random()*16);
                 this.siz = 8 + Math.floor(Math.random()*11); this.dex = 3 + Math.floor(Math.random()*16);
                 this.personality = (this.str + this.dex > 25) ? "積極" : (this.con < 10 ? "懶惰" : "普通");
-                this.age = isBaby ? 0 : 20; this.maxHp = Math.ceil((this.con + this.siz) / 2);
+                this.maxHp = Math.ceil((this.con + this.siz) / 2);
                 this.hp = this.maxHp; this.hunger = 80; this.energy = 80;
                 this.action = "漫步"; this.angle = Math.random()*Math.PI*2;
                 this.mateCooldown = 0; this.rels = {}; this.lastPlague = 0;
@@ -111,9 +114,9 @@
 
             update() {
                 if(this.hp <= 0) return;
-                this.age += 0.0004; this.hunger -= 0.008; this.energy -= 0.008;
+                this.age = (totalMinutes - this.birthTime) / MINS_IN_YEAR;
+                this.hunger -= 0.008; this.energy -= 0.008;
                 if(this.mateCooldown > 0) this.mateCooldown--;
-
                 if(this.hp < this.maxHp && this.hunger > 50) this.hp = Math.min(this.maxHp, this.hp + (this.con / 1000));
 
                 if(plagueZone) {
@@ -212,9 +215,10 @@
                 ctx.strokeStyle = "rgba(0, 255, 0, 0.6)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, plagueZone.r + pulse + 5, 0, Math.PI*2); ctx.stroke();
                 ctx.fillStyle = "#0f0"; ctx.font = "bold 14px Arial"; ctx.fillText("⚠ 瘟疫爆發", plagueZone.x - 35, plagueZone.y - plagueZone.r - 20);
             }
-            totalMinutes += 0.05;
-            let yrs = Math.floor(totalMinutes/(60*24*30*12))+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1, days = Math.floor((totalMinutes/(60*24))%30)+1;
-            timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 ${days} 日 ${Math.floor((totalMinutes/60)%24).toString().padStart(2,'0')}:${Math.floor(totalMinutes%60).toString().padStart(2,'0')}`;
+            totalMinutes += 15;
+            let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1, days = Math.floor((totalMinutes/(60*24))%30)+1;
+            let hrs = Math.floor((totalMinutes/60)%24), mins = Math.floor(totalMinutes%60);
+            timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 ${days} 日 ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
             let aliveV = villagers.filter(v => v.hp > 0);
             document.getElementById('pop-stats').innerText = `人口：${aliveV.length} (男: ${aliveV.filter(v=>v.gender=="男").length} | 女: ${aliveV.filter(v=>v.gender=="女").length})`;
             document.getElementById('death-stats').innerText = `累積死亡：${deathCount}`;
