@@ -2,11 +2,11 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V9.6 - 終極穩定版</title>
+    <title>Underworld V10.0</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="top-bar">時間：<span id="world-time">校準中...</span></div>
+<div id="top-bar">時間：<span id="world-time">秩序校準中...</span></div>
 <div id="game-container">
     <canvas id="worldCanvas"></canvas>
     <div id="admin-footer">
@@ -16,39 +16,29 @@
 </div>
 <div id="god-panel">
     <div class="divine-dashboard">
-        <div class="grace-header">✨ 神恩儲備 (Divine Grace)</div>
+        <div class="grace-header">✨ 神恩儲備</div>
         <div id="grace-points">200</div>
         <hr style="border:0; border-top:1px solid #444; margin:8px 0;">
         <div id="pop-stats" style="font-size:0.75em; color:#ffd700;">載入中...</div>
-        <div id="death-stats" style="font-size:0.7em; color:#ff4d4d;">累積死亡：0</div>
     </div>
     <h3 class="panel-title">神權干預</h3>
     <div class="btn-grid">
-        <div class="btn-wrap"><button onclick="castMiracle('food')">投放聖餐</button><span class="btn-desc">100pt 全體</span></div>
-        <div class="btn-wrap"><button onclick="castMiracle('energy')">神聖治癒</button><span class="btn-desc">50pt 單體+1</span></div>
-        <div class="btn-wrap"><button style="color:#ff69b4;" onclick="castLoveMiracle()">神聖紅線</button><span class="btn-desc">200pt 繁衍</span></div>
-        <div class="btn-wrap"><button style="color:#888;" onclick="castPlague()">天罰災厄</button><span class="btn-desc">0pt 瘟疫</span></div>
+        <div class="btn-wrap"><button onclick="castMiracle('food')">聖餐</button></div>
+        <div class="btn-wrap"><button onclick="castMiracle('energy')">治癒</button></div>
     </div>
     <div id="status-window">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong>
-            <span id="v-age" style="color: #4caf50;">0 歲</span>
-        </div>
-        <div id="v-personality" style="color: #00ff00; font-size: 0.75em; margin-bottom: 5px;">性格：載入中</div>
+        <strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong>
+        <span id="v-age" style="color: #4caf50;">0 歲</span>
+        <div id="v-personality" style="color: #00ff00; font-size: 0.75em; margin: 5px 0;">載入中</div>
         <div class="lineage-text">父：<span id="v-father"></span> | 母：<span id="v-mother"></span></div>
         <div id="v-social-box"></div>
-        <div class="attr-grid">
-            <div id="attr-str"></div><div id="attr-con"></div>
-            <div id="attr-siz"></div><div id="attr-dex"></div>
-        </div>
+        <div class="attr-grid"><div id="attr-str"></div><div id="attr-con"></div><div id="attr-siz"></div><div id="attr-dex"></div></div>
         <div class="status-bar-group">
-            <div class="bar-label"><span>天命 (HP)</span><span id="hp-txt">100%</span></div>
-            <div class="bar"><div id="v-health" class="bar-fill" style="background: #e74c3c;"></div></div>
-            <div class="bar-label" style="margin-top:6px;"><span>飽食 (Food)</span><span id="fd-txt">100%</span></div>
-            <div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div>
+            天命<div class="bar"><div id="v-health" class="bar-fill" style="background: #e74c3c;"></div></div>
+            飽食<div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div>
         </div>
     </div>
-    <button onclick="resetWorld()" style="width:100%; margin-top:15px; font-size:0.7em; color:#555; background:none; border:1px solid #333; cursor:pointer;">文明重啟</button>
+    <button onclick="resetWorld()" style="width:100%; margin-top:15px; font-size:0.7em; background:none; border:1px solid #333; color:#555; cursor:pointer;">歸零</button>
 </div>
 <script src="config.js"></script>
 <script src="villager.js"></script>
