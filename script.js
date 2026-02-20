@@ -1,4 +1,4 @@
-/* script.js - V6.6 禁療修正版 */
+/* script.js - V6.6
 let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
 let deathCount = 0, currentTab = 'All', plagueZone = null;
 const TILE_SIZE = 45, SOCIAL_RANGE = 80, MINS_IN_YEAR = 60 * 24 * 30 * 12;
@@ -181,7 +181,25 @@ window.onload = function() {
     }
 
     window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; setTimeout(()=>plagueZone=null, 5000); };
-    window.castMiracle = (t) => villagers.forEach(v => { if(v.hp>0) { if(t==='food') v.hunger=100; else { v.hp = v.maxHp; v.plagueTimer = 0; } } });
+    /* 修改為單體目標神蹟 */
+window.castMiracle = (t) => {
+    if (!selectedId) {
+        alert("請先點擊地圖上的小人，或從下方列表選擇一位目標！");
+        return;
+    }
+    
+    let v = villagers.find(v => v.id === selectedId && v.hp > 0);
+    if (v) {
+        if (t === 'food') {
+            v.hunger = 100;
+        } else {
+            v.hp = v.maxHp;
+            v.plagueTimer = 0; // 治癒後解除禁療
+        }
+        // 觸發一次畫面上報表刷新
+        syncBottomBar(); 
+    }
+};
     window.resetWorld = () => { if(confirm("重啟文明？")) init(); };
 
     function loop() {
