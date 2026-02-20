@@ -1,9 +1,10 @@
-/* script.js - 世界引擎：UI、時間與神權 */
+/* script.js - V9.6 神聖鏈接版 */
 
 window.onload = function() {
     const canvas = document.getElementById('worldCanvas');
     window.cvsGlobal = canvas;
     const ctx = canvas.getContext('2d');
+    const timeDisplay = document.getElementById('world-time');
     
     function init() {
         villagers = []; environment = []; genCounters = {}; selectedId = null; matchId = null; totalMinutes = 0; deathCount = 0; gracePoints = CONFIG.INITIAL_GRACE;
@@ -19,7 +20,7 @@ window.onload = function() {
         syncBottomBar();
     }
 
-    // 神權操作邏輯
+    // --- 神權按鈕邏輯 (確保不報錯) ---
     window.castMiracle = (t) => {
         if (t === 'food') {
             if (gracePoints < CONFIG.COST_FOOD) { alert(`神恩不足 (${CONFIG.COST_FOOD}pt)`); return; }
@@ -48,6 +49,7 @@ window.onload = function() {
     window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; addNotice("⚠️ 天罰爆發！", "notice-death"); setTimeout(()=>plagueZone=null, 5000); };
     window.resetWorld = () => { if(confirm("重啟？")) init(); };
 
+    // --- 主循環 ---
     function loop() {
         ctx.fillStyle = "#1e301e"; ctx.fillRect(0,0,canvas.width, canvas.height);
         environment.forEach(t => { ctx.fillStyle = (t.type === 'water' ? "#2a5a7a" : (t.type === 'forest' ? "#145a32" : "#2d4a2d")); ctx.fillRect(t.x, t.y, TILE_SIZE-1, TILE_SIZE-1); });
@@ -56,7 +58,7 @@ window.onload = function() {
         totalMinutes += CONFIG.GAME_SPEED; 
         if (Math.floor(totalMinutes/CONFIG.MINS_IN_YEAR) > oldY) updateGrace(CONFIG.YEARLY_GRACE);
 
-        // --- 修正：年月日精確計算 ---
+        // 時間計算修正 (年月日顯示)
         let yrs = Math.floor(totalMinutes / CONFIG.MINS_IN_YEAR) + 1;
         let remM = totalMinutes % CONFIG.MINS_IN_YEAR;
         let mths = Math.floor(remM / CONFIG.MINS_IN_MONTH) + 1;
@@ -64,9 +66,7 @@ window.onload = function() {
         let days = Math.floor(remD / CONFIG.MINS_IN_DAY) + 1;
         let hrs = Math.floor((remD % CONFIG.MINS_IN_DAY) / 60);
         let mins = Math.floor(remD % 60);
-
-        document.getElementById('world-time').innerText = 
-            `世界曆 第 ${yrs}年 ${mths}月 ${days}日 | ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
+        timeDisplay.innerText = `世界曆 第 ${yrs}年 ${mths}月 ${days}日 | ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
 
         let aliveV = villagers.filter(v => v.hp > 0);
         document.getElementById('pop-stats').innerText = `人口：${aliveV.length} (男: ${aliveV.filter(v=>v.gender=="男").length} | 女: ${aliveV.filter(v=>v.gender=="女").length})`;
@@ -77,34 +77,56 @@ window.onload = function() {
         if(selectedId) {
             let v = villagers.find(v => v.id === selectedId);
             if(v && v.hp > 0) {
+                // UI 更新復甦
                 document.getElementById('v-name').innerText = (v.isHero?"✨ ":"") + v.name;
                 document.getElementById('v-age').innerText = Math.floor(v.age)+"歲";
-                document.getElementById('v-elder-tag').innerText = v.isHero ? "✨ 神選之才 ✨" : "✨ 部落長老 ✨";
-                document.getElementById('v-elder-tag').style.display = (v.isElder || v.isHero) ? 'block' : 'none';
                 document.getElementById('v-personality').innerText = "性格："+v.personality;
-                document.getElementById('v-father').innerText = v.father; document.getElementById('v-mother').innerText = v.mother;
+                document.getElementById('v-father').innerText = v.father; 
+                document.getElementById('v-mother').innerText = v.mother;
                 
+                // 屬性鑑定修正 (移除原本的 this.str 錯誤)
                 let s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
-                // --- 修正：屬性文字徹底去重 ---
                 document.getElementById('attr-str').innerHTML = `力量 (STR): ${v.str} <span class="attr-label ${s.cls}">(${s.txt})</span>`;
                 document.getElementById('attr-con').innerHTML = `體質 (CON): ${v.con} <span class="attr-label ${c.cls}">(${c.txt})</span>`;
                 document.getElementById('attr-siz').innerHTML = `體型 (SIZ): ${v.siz} <span class="attr-label ${z.cls}">(${z.txt})</span>`;
                 document.getElementById('attr-dex').innerHTML = `敏捷 (DEX): ${v.dex} <span class="attr-label ${d.cls}">(${d.txt})</span>`;
                 
                 let hpP = Math.floor(v.hp/v.maxHp*100), fdP = Math.floor(v.hunger);
-                document.getElementById('v-health').style.width = hpP+'%'; document.getElementById('v-hunger').style.width = fdP+'%';
-                document.getElementById('hp-txt').innerText = hpP + '%'; document.getElementById('fd-txt').innerText = fdP+'%';
+                document.getElementById('v-health').style.width = hpP+'%'; 
+                document.getElementById('v-hunger').style.width = fdP+'%';
+                document.getElementById('hp-txt').innerText = hpP + '%'; 
+                document.getElementById('fd-txt').innerText = fdP+'%';
                 
+                // 社交列表重塑
                 let g = { '❤️ 戀人': [], '👪 家族': [], '🤝 朋友': [] }, h = '';
                 Object.values(v.rels).forEach(r => { if(g[r.type]) g[r.type].push(r.name); });
-                for (let [t, ns] of Object.entries(g)) { if(ns.length > 0) {
-                    h += `<div class="rel-header">${t}</div><div class="rel-tags">${ns.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>`;
-                }}
+                for (let [t, ns] of Object.entries(g)) { 
+                    if(ns.length > 0) { h += `<div class="rel-header">${t}</div><div class="rel-tags">${ns.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>`; }
+                }
                 document.getElementById('v-social-box').innerHTML = h || '暫無社交';
             } else { selectedId = null; document.getElementById('status-window').style.display = 'none'; syncBottomBar(); }
         }
         requestAnimationFrame(loop);
     }
+
+    // --- 修正：更精確的畫布點擊判定 ---
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        
+        let found = villagers.find(v => Math.hypot(v.x - clickX, v.y - clickY) < 25 && v.hp > 0);
+        if(found) { 
+            selectedId = found.id; 
+            document.getElementById('status-window').style.display = 'block'; 
+            syncBottomBar(); 
+        } else { 
+            selectedId = null; 
+            document.getElementById('status-window').style.display = 'none'; 
+            syncBottomBar(); 
+        }
+    });
+
     init(); loop();
 };
 
@@ -118,9 +140,8 @@ function updateGrace(amount, reason = "") {
 function addNotice(msg, typeClass = "") {
     const noticeBoard = document.getElementById('notice-board');
     if (!noticeBoard) return;
-    let yrs = Math.floor(totalMinutes/CONFIG.MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/CONFIG.MINS_IN_MONTH)%12)+1;
     let div = document.createElement('div');
-    div.innerHTML = `<span class="notice-time">${yrs}年${mths}月</span> <span class="${typeClass}">${msg}</span>`;
+    div.innerHTML = `<span class="notice-time">${Math.floor(totalMinutes/CONFIG.MINS_IN_MONTH)+1}月</span> <span class="${typeClass}">${msg}</span>`;
     noticeBoard.prepend(div);
     if (noticeBoard.childNodes.length > 50) noticeBoard.removeChild(noticeBoard.lastChild);
 }
@@ -133,6 +154,8 @@ function isDirectLineage(v1, v2, depth = 1) {
     if (v1M && isDirectLineage(v1M, v2, depth + 1)) return true;
     return false;
 }
+
+// --- 修復點擊按鈕暫停的問題 ---
 function syncBottomBar() {
     let aliveV = villagers.filter(v=>v.hp>0);
     let gens = ['All', ...new Set(aliveV.map(v=>v.gen))].sort((a,b)=>a-b);
@@ -140,13 +163,27 @@ function syncBottomBar() {
     if(!genTabs) return;
     genTabs.innerHTML = '';
     gens.forEach(g => {
-        let btn = document.createElement('div'); btn.className = `tab-btn ${currentTab == g ? 'active' : ''}`;
-        btn.innerText = g == 'All' ? '全部' : `G${g}`; btn.onclick = () => { currentTab = g; syncBottomBar(); }; genTabs.appendChild(btn);
+        let btn = document.createElement('div'); 
+        btn.className = `tab-btn ${currentTab == g ? 'active' : ''}`;
+        btn.innerText = g == 'All' ? '全部' : `G${g}`; 
+        btn.onclick = (e) => { 
+            e.stopPropagation(); // 防止觸發畫布事件
+            currentTab = g; 
+            syncBottomBar(); 
+        }; 
+        genTabs.appendChild(btn);
     });
     bottomBar.innerHTML = '';
     aliveV.filter(v => currentTab == 'All' || v.gen == currentTab).forEach(v => {
-        let btn = document.createElement('div'); btn.className = `v-btn ${v.gender==="男"?"male":"female"} ${selectedId===v.id?"selected":""}`;
-        btn.innerText = (v.isHero?"✨":"")+(v.isElder?"👑":"")+v.name; btn.onclick = () => { selectedId = v.id; document.getElementById('status-window').style.display = 'block'; syncBottomBar(); };
+        let btn = document.createElement('div'); 
+        btn.className = `v-btn ${v.gender==="男"?"male":"female"} ${selectedId===v.id?"selected":""}`;
+        btn.innerText = (v.isHero?"✨":"")+(v.isElder?"👑":"")+v.name; 
+        btn.onclick = (e) => { 
+            e.stopPropagation();
+            selectedId = v.id; 
+            document.getElementById('status-window').style.display = 'block'; 
+            syncBottomBar(); 
+        };
         bottomBar.appendChild(btn);
     });
 }
