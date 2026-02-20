@@ -1,4 +1,4 @@
-/* script.js - V7.5 */
+/* script.js - V7.6 最終修正版 */
 let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
 let deathCount = 0, currentTab = 'All', plagueZone = null;
 const TILE_SIZE = 45, SOCIAL_RANGE = 80, MINS_IN_YEAR = 60 * 24 * 30 * 12;
@@ -20,7 +20,7 @@ window.onload = function() {
         let div = document.createElement('div');
         div.innerHTML = `<span class="notice-time">${yrs}年${mths}月</span> <span class="${typeClass}">${msg}</span>`;
         noticeBoard.prepend(div);
-        if (noticeBoard.childNodes.length > 40) noticeBoard.removeChild(noticeBoard.lastChild);
+        if (noticeBoard.childNodes.length > 50) noticeBoard.removeChild(noticeBoard.lastChild);
     }
 
     function getSerial(gen, gender) {
@@ -153,8 +153,7 @@ window.onload = function() {
             this.x += Math.cos(this.angle)*spd; this.y += Math.sin(this.angle)*spd;
             if(Math.random()<0.02) this.angle += (Math.random()-0.5);
             if(this.x < 15 || this.x > canvas.width-15) this.angle = Math.PI - this.angle;
-            // 疆域封印：底部 110 像素
-            if(this.y < 50 || this.y > canvas.height - 110 - 15) this.angle = -this.angle;
+            if(this.y < 50 || this.y > canvas.height - 115 - 15) this.angle = -this.angle;
         }
         draw(ctx) {
             if(this.hp <= 0) { ctx.fillStyle="#333"; ctx.fillRect(this.x-5,this.y-5,10,10); return; }
@@ -185,15 +184,13 @@ window.onload = function() {
 
     window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; addNotice("⚠️ 天罰！瘟疫在隨機處爆發。", "notice-death"); setTimeout(()=>plagueZone=null, 5000); };
     
-    // --- 核心修改：神權分立邏輯 ---
+    /* 核心修改：投放聖餐改為全體 */
     window.castMiracle = (t) => {
         if (t === 'food') {
-            // 全體飽食回滿
             villagers.forEach(v => { if(v.hp > 0) v.hunger = 100; });
             addNotice("✨ 神蹟：全體村民獲得聖餐飽足。", "notice-elder");
         } else {
-            // 單體神聖治癒
-            if (!selectedId) { alert("神聖治癒需要先點擊一名小人！"); return; }
+            if (!selectedId) { alert("請先點擊小人目標！"); return; }
             let v = villagers.find(v => v.id === selectedId && v.hp > 0);
             if (v) {
                 v.hp = v.maxHp; v.plagueTimer = 0;
@@ -214,7 +211,7 @@ window.onload = function() {
             ctx.strokeStyle = "rgba(0, 255, 0, 0.6)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, 105 + p, 0, Math.PI*2); ctx.stroke();
             ctx.fillStyle = "#0f0"; ctx.font = "bold 14px Arial"; ctx.fillText("⚠ 瘟疫爆發", plagueZone.x - 35, plagueZone.y - 120);
         }
-        totalMinutes += 250;
+        totalMinutes += 120;
         let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1;
         let hrs = Math.floor((totalMinutes/60)%24), mins = Math.floor(totalMinutes%60);
         timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 | ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
