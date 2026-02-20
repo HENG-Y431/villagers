@@ -1,4 +1,4 @@
-/* script.js - V7.2 血脈與師徒修正版 */
+/* script.js - V7.3 疆域封印與日誌版 */
 let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
 let deathCount = 0, currentTab = 'All', plagueZone = null;
 const TILE_SIZE = 45, SOCIAL_RANGE = 80, MINS_IN_YEAR = 60 * 24 * 30 * 12;
@@ -11,6 +11,18 @@ window.onload = function() {
     const genTabs = document.getElementById('gen-tabs');
     const statusWindow = document.getElementById('status-window');
     const socialBox = document.getElementById('v-social-box');
+    const noticeBoard = document.getElementById('notice-board');
+
+    // 公告日誌函數
+    function addNotice(msg, typeClass = "") {
+        let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1;
+        let mths = Math.floor((totalMinutes/(60*24*30))%12)+1;
+        let days = Math.floor((totalMinutes/(60*24))%30)+1;
+        let div = document.createElement('div');
+        div.innerHTML = `<span class="notice-time">[Y${yrs} M${mths} D${days}]</span> <span class="${typeClass}">${msg}</span>`;
+        noticeBoard.prepend(div); // 最新公告在最上面
+        if (noticeBoard.childNodes.length > 50) noticeBoard.removeChild(noticeBoard.lastChild);
+    }
 
     function getSerial(gen, gender) {
         if (!genCounters[gen]) genCounters[gen] = { m: 1, f: 2 };
@@ -19,34 +31,28 @@ window.onload = function() {
         return s.toString().padStart(2, '0');
     }
 
-    // 新增：血脈檢查工具 (追溯三代)
     function isDirectLineage(v1, v2, depth = 1) {
         if (depth > 3 || !v1 || !v2) return false;
         if (v1.fatherId === v2.id || v1.motherId === v2.id) return true;
         if (v2.fatherId === v1.id || v2.motherId === v1.id) return true;
-        
-        let v1Father = villagers.find(v => v.id === v1.fatherId);
-        let v1Mother = villagers.find(v => v.id === v1.motherId);
-        if (v1Father && isDirectLineage(v1Father, v2, depth + 1)) return true;
-        if (v1Mother && isDirectLineage(v1Mother, v2, depth + 1)) return true;
-        
+        let v1F = villagers.find(v => v.id === v1.fatherId), v1M = villagers.find(v => v.id === v1.motherId);
+        if (v1F && isDirectLineage(v1F, v2, depth + 1)) return true;
+        if (v1M && isDirectLineage(v1M, v2, depth + 1)) return true;
         return false;
     }
 
     function init() {
-        villagers = []; environment = []; genCounters = {}; selectedId = null; totalMinutes = 0; deathCount = 0; plagueZone = null;
+        villagers = []; environment = []; genCounters = {}; selectedId = null; totalMinutes = 0; deathCount = 0; noticeBoard.innerHTML = '';
         canvas.width = window.innerWidth - 280; canvas.height = window.innerHeight;
         const cols = Math.ceil(canvas.width / TILE_SIZE), rows = Math.ceil(canvas.height / TILE_SIZE);
-        for(let x=0; x<cols; x++) {
-            for(let y=0; y<rows; y++) {
-                let r = Math.random();
-                environment.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: (r < 0.08 ? 'water' : (r < 0.22 ? 'forest' : 'grass'))});
-            }
+        for(let x=0; x<cols; x++) for(let y=0; y<rows; y++) {
+            let r = Math.random(); environment.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: (r < 0.08 ? 'water' : (r < 0.22 ? 'forest' : 'grass'))});
         }
         for(let i=0; i<4; i++) {
             let v = new Villager(canvas, 1, (i < 2 ? "男" : "女"), false, null, null, "無", "無", null, null, 20);
             v.isElder = true; villagers.push(v);
         }
+        addNotice("文明起源：四位始祖長老降臨 Underworld。", "notice-elder");
         syncBottomBar();
     }
 
@@ -57,8 +63,7 @@ window.onload = function() {
             this.name = `${this.gen}-${this.serial}`;
             this.x = x || cvs.width/2 + (Math.random()-0.5)*200;
             this.y = y || cvs.height/2 + (Math.random()-0.5)*200;
-            this.father = fName; this.mother = mName;
-            this.fatherId = fId; this.motherId = mId;
+            this.father = fName; this.mother = mName; this.fatherId = fId; this.motherId = mId;
             this.birthTime = totalMinutes - (startAge * MINS_IN_YEAR);
             this.age = startAge;
             this.str = 3 + Math.floor(Math.random()*16); this.con = 3 + Math.floor(Math.random()*16);
@@ -79,18 +84,13 @@ window.onload = function() {
             if(this.mateCooldown > 0) this.mateCooldown--;
             if(this.plagueTimer > 0) this.plagueTimer--;
             if(this.hp < this.maxHp && this.hunger > 50 && this.plagueTimer <= 0) this.hp = Math.min(this.maxHp, this.hp + (this.con / 5000));
-            
             if(plagueZone && Math.hypot(this.x-plagueZone.x, this.y-plagueZone.y) < 100) {
                 let now = Date.now(); if(now - this.lastPlague > 1000) { this.hp -= this.maxHp * 0.15; this.lastPlague = now; this.plagueTimer = 600; }
             }
-
-            // --- 社交邏輯全時段開啟 (小孩也能交朋友) ---
             this.socialCycle();
-
             if(this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
             else if(this.hunger < 70 || (this.action === "進食" && this.hunger < 95)) { this.action = "進食"; this.move(0.75); this.findRes(); }
             else {
-                // 修改：跟隨年齡改為 13 歲
                 if(this.age < 13) {
                     let p = villagers.find(v => v.id === this.motherId && v.hp > 0) || villagers.find(v => v.id === this.fatherId && v.hp > 0);
                     if(p) { this.action = "跟隨"; this.angle = Math.atan2(p.y - this.y, p.x - this.x); this.move(0.45); }
@@ -99,7 +99,12 @@ window.onload = function() {
             }
             if(this.hunger <= 0) this.hp -= 0.04;
             if(this.age > 85) this.hp = 0;
-            if(this.hp <= 0) { this.hp = 0; deathCount++; if(this.isElder) this.passElderTitle(); syncBottomBar(); }
+            if(this.hp <= 0) {
+                this.hp = 0; deathCount++;
+                addNotice(`${this.isElder?"長老 ":"村民 "}${this.name} 登出 Underworld (壽命或意外)。`, "notice-death");
+                if(this.isElder) this.passElderTitle();
+                syncBottomBar();
+            }
         }
 
         passElderTitle() {
@@ -108,6 +113,7 @@ window.onload = function() {
             if(p.length > 0) {
                 p.sort((a,b) => ((b.con*2)+Object.keys(b.rels).length*5) - ((a.con*2)+Object.keys(a.rels).length*5));
                 p[0].isElder = true;
+                addNotice(`繼承者出現！${p[0].name} 接掌長老重任。`, "notice-elder");
             }
         }
 
@@ -117,30 +123,18 @@ window.onload = function() {
                 if(Math.hypot(this.x-o.x, this.y-o.y) < SOCIAL_RANGE) {
                     if(!this.rels[o.id]) this.rels[o.id] = { score: 0, type: '陌生人', name: o.name };
                     if(!o.rels[this.id]) o.rels[this.id] = { score: 0, type: '陌生人', name: this.name };
-                    
                     let r = this.rels[o.id];
-                    // 如果已經是直系血親，則不增加好感分數，維持親情
                     if (['父親','母親','子女'].includes(r.type)) return;
-
                     r.score += 0.2; o.rels[this.id].score += 0.2;
-                    
-                    // 1. 判定師生 (需排除三代直系)
-                    if(this.age > 40 && o.age < 18 && !isDirectLineage(this, o)) {
-                        r.type = '師生';
-                        o.rels[this.id].type = '師生';
-                    }
-                    // 2. 判定朋友與戀人
+                    if(this.age > 40 && o.age < 18 && !isDirectLineage(this, o)) { r.type = '師生'; o.rels[this.id].type = '師生'; }
                     else if(r.score > 20 && (r.type === '陌生人' || r.type === '師生')) {
                         if(this.age >= 18 && o.age >= 18) {
                             let roll = Math.random();
                             if(this.gender !== o.gender) r.type = (roll < 0.7) ? '戀人' : '朋友';
                             else r.type = (roll < 0.2) ? '戀人' : '朋友';
-                        } else {
-                            r.type = '朋友';
-                        }
+                        } else { r.type = '朋友'; }
                         o.rels[this.id].type = r.type;
                     }
-                    
                     if(r.type === '戀人' && this.gender !== o.gender && this.mateCooldown <= 0 && o.mateCooldown <= 0 && this.hunger > 65) this.reproduce(o);
                 }
             });
@@ -149,18 +143,22 @@ window.onload = function() {
             this.mateCooldown = 5000; o.mateCooldown = 5000;
             let baby = new Villager(canvas, Math.max(this.gen, o.gen)+1, (Math.random()>0.5?"男":"女"), true, this.x, this.y, (this.gender==="男"?this.name:o.name), (this.gender==="女"?this.name:o.name), (this.gender==="男"?this.id:o.id), (this.gender==="女"?this.id:o.id));
             this.rels[baby.id] = { score: 100, type: '子女', name: baby.name }; o.rels[baby.id] = { score: 100, type: '子女', name: baby.name };
-            villagers.push(baby); syncBottomBar();
+            villagers.push(baby); addNotice(`新生命降臨！${baby.name} 在部落誕生。`, "notice-birth"); syncBottomBar();
         }
         findRes() {
             let t = environment.find(e => e.type !== 'grass' && Math.abs(e.x-this.x)<30 && Math.abs(e.y-this.y)<30);
             if(t) this.hunger = Math.min(100, this.hunger + (this.str/60));
         }
+
+        // --- 核心修正：疆域封印移動邏輯 ---
         move(spd) {
             if(Math.random()<0.02) this.angle += (Math.random()-0.5);
             this.x += Math.cos(this.angle)*spd; this.y += Math.sin(this.angle)*spd;
             if(this.x < 15 || this.x > canvas.width-15) this.angle = Math.PI - this.angle;
-            if(this.y < 50 || this.y > canvas.height-15) this.angle = -this.angle;
+            // 關鍵：將底部 95 像素（標籤欄位高度）設為障礙
+            if(this.y < 50 || this.y > canvas.height - 95 - 15) this.angle = -this.angle;
         }
+
         draw(ctx) {
             if(this.hp <= 0) { ctx.fillStyle="#333"; ctx.fillRect(this.x-5,this.y-5,10,10); return; }
             let r = (this.age < 18) ? 6 : (10 + this.siz/2.5);
@@ -188,13 +186,13 @@ window.onload = function() {
         });
     }
 
-    window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; setTimeout(()=>plagueZone=null, 5000); };
+    window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; addNotice("天罰降臨：一場未知的瘟疫正在擴散...", "notice-death"); setTimeout(()=>plagueZone=null, 5000); };
     window.castMiracle = (t) => {
         if (!selectedId) { alert("請先點擊小人目標！"); return; }
         let v = villagers.find(v => v.id === selectedId && v.hp > 0);
         if (v) {
             if (t === 'food') v.hunger = 100;
-            else { v.hp = v.maxHp; v.plagueTimer = 0; }
+            else { v.hp = v.maxHp; v.plagueTimer = 0; addNotice(`神蹟顯靈：${v.name} 獲得了神聖治癒。`, "notice-elder"); }
             syncBottomBar();
         }
     };
