@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V4.7 - 生存本能與行政導航</title>
+    <title>Underworld V4.72 - 生存本能與行政導航</title>
     <style>
         body { margin: 0; background: #121212; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: #e0e0e0; }
         #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #daa520; color: #00ff00; font-weight: bold; font-size: 0.9em; }
@@ -46,10 +46,31 @@
 </head>
 <body>
 
-<div id="top-bar">世界時間：<span id="world-time">08:00</span></div>
-<div id="game-container">
-    <canvas id="worldCanvas"></canvas>
-    <div id="bottom-bar"></div>
+// --- 核心變數 ---
+let totalMinutes = 0; // 從 0 分鐘開始累積
+
+// --- 世界時鐘更新函數 ---
+function updateWorldTime() {
+    // 每一幀微量增加時間 (0.05 約為之前設定的穩定速度)
+    totalMinutes += 0.05; 
+
+    // 計算年月日時分 (設定每個月固定 30 天以利模擬)
+    let minutes = Math.floor(totalMinutes % 60);
+    let hours = Math.floor((totalMinutes / 60) % 24);
+    let days = Math.floor((totalMinutes / (60 * 24)) % 30) + 1;
+    let months = Math.floor((totalMinutes / (60 * 24 * 30)) % 12) + 1;
+    let years = Math.floor(totalMinutes / (60 * 24 * 30 * 12)) + 1;
+
+    // 格式化顯示 (使用 padStart 補零，防止字串長度變動造成跳針)
+    const timeString = `世界曆 第 ${years} 年 ${months} 月 ${days} 日 ` + 
+                       `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    
+    // 更新到 HTML 上
+    document.getElementById('world-time').innerText = timeString;
+}
+
+// --- 在妳的 loop() 循環中呼叫這行 ---
+// updateWorldTime();
 </div>
 
 <div id="god-panel">
