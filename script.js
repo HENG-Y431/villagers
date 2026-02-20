@@ -1,4 +1,4 @@
-/* script.js - V10.2 引擎校正：修復分頁與社交 */
+/* script.js - 世界運行中心：負責畫面繪製、UI 更新與事件監聽 */
 
 window.onload = function() {
     const canvas = document.getElementById('worldCanvas');
@@ -19,21 +19,21 @@ window.onload = function() {
         syncBottomBar();
     }
 
-    // --- 神權函數 ---
+    // --- 神權按鈕掛載 ---
     window.castMiracle = (t) => {
         if (t === 'food') {
-            if (gracePoints < CONFIG.COST_FOOD) { alert(`點數不足`); return; }
+            if (gracePoints < CONFIG.COST_FOOD) { alert("點數不足"); return; }
             updateGrace(-CONFIG.COST_FOOD); villagers.forEach(v => { if(v.hp > 0) v.hunger = 100; });
         } else {
             if (!selectedId) return;
-            if (gracePoints < CONFIG.COST_ENERGY) { alert(`點數不足`); return; }
-            let v = villagers.find(v => v.id === selectedId && v.hp > 0);
+            if (gracePoints < CONFIG.COST_ENERGY) { alert("點數不足"); return; }
+            let v = villagers.find(v => v.id === selectedId);
             if (v) { updateGrace(-CONFIG.COST_ENERGY); v.hp = v.maxHp; v.evolveRandomStat(true); syncBottomBar(); }
         }
     };
     window.castLoveMiracle = () => {
         if (!selectedId) return;
-        if (gracePoints < CONFIG.COST_LOVE) { alert(`點數不足`); return; }
+        if (gracePoints < CONFIG.COST_LOVE) { alert("點數不足"); return; }
         if (!matchId) { matchId = selectedId; addNotice(`🔮 選中命定之人。`); }
         else {
             if (matchId === selectedId) { matchId = null; return; }
@@ -51,7 +51,7 @@ window.onload = function() {
         
         totalMinutes += CONFIG.GAME_SPEED; 
         
-        // 修正時間顯示
+        // 修正：年月日精確顯示
         let yrs = Math.floor(totalMinutes / CONFIG.MINS_IN_YEAR) + 1;
         let mths = Math.floor((totalMinutes % CONFIG.MINS_IN_YEAR) / CONFIG.MINS_IN_MONTH) + 1;
         let days = Math.floor((totalMinutes % CONFIG.MINS_IN_MONTH) / CONFIG.MINS_IN_DAY) + 1;
@@ -70,29 +70,27 @@ window.onload = function() {
                 document.getElementById('v-father').innerText = v.father; document.getElementById('v-mother').innerText = v.mother;
                 
                 let s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
-                document.getElementById('attr-str').innerHTML = `力量 (STR): ${v.str} <span class="attr-label ${s.cls}">(${s.txt})</span>`;
-                document.getElementById('attr-con').innerHTML = `體質 (CON): ${v.con} <span class="attr-label ${c.cls}">(${c.txt})</span>`;
-                document.getElementById('attr-siz').innerHTML = `體型 (SIZ): ${v.siz} <span class="attr-label ${z.cls}">(${z.txt})</span>`;
-                document.getElementById('attr-dex').innerHTML = `敏捷 (DEX): ${v.dex} <span class="attr-label ${d.cls}">(${d.txt})</span>`;
-                
+                document.getElementById('attr-str').innerHTML = `力量 (STR): ${v.str} (${s.txt})`;
+                document.getElementById('attr-con').innerHTML = `體質 (CON): ${v.con} (${c.txt})`;
+                document.getElementById('attr-siz').innerHTML = `體型 (SIZ): ${v.siz} (${z.txt})`;
+                document.getElementById('attr-dex').innerHTML = `敏捷 (DEX): ${v.dex} (${d.txt})`;
                 document.getElementById('v-health').style.width = (v.hp/v.maxHp*100)+'%';
                 document.getElementById('v-hunger').style.width = v.hunger+'%';
                 
-                // 社交復甦：修正分類
-                let family = [], lovers = [];
-                Object.values(v.rels).forEach(r => {
-                    if(r.type === '家族' || r.type === '子女') family.push(r.name);
-                    else if(r.type === '戀人') lovers.push(r.name);
+                // 修正：社交類別字串比對
+                let fam = [], lov = [];
+                Object.values(v.rels).forEach(r => { 
+                    if(r.type === '家族' || r.type === '子女') fam.push(r.name);
+                    else if(r.type === '戀人') lov.push(r.name);
                 });
-                let h = family.length ? `<div class="rel-header">👪 家族</div><div class="rel-tags">${family.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>` : '';
-                h += lovers.length ? `<div class="rel-header">❤️ 戀人</div><div class="rel-tags">${lovers.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>` : '';
-                document.getElementById('v-social-box').innerHTML = h || '暫無社交';
+                document.getElementById('v-social-box').innerHTML = (fam.length ? `<div class="rel-header">👪 家族</div><div class="rel-tags">${fam.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>` : '') +
+                                                                  (lov.length ? `<div class="rel-header">❤️ 戀人</div><div class="rel-tags">${lov.map(n=>`<span class="rel-tag">${n}</span>`).join('')}</div>` : '') || '暫無社交';
             } else { selectedId = null; document.getElementById('status-window').style.display='none'; }
         }
         requestAnimationFrame(loop);
     }
 
-    // 修正點擊座標判定
+    // 修正：座標偏移判定
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left, my = e.clientY - rect.top;
@@ -118,19 +116,19 @@ function getCoC6Label(v) {
     return {txt:"正常",cls:""}; 
 }
 
-// --- 核心修正：重新補回世代分頁邏輯 ---
+// 修正：補回世代分頁生成邏輯
 function syncBottomBar() {
-    let aliveV = villagers.filter(v=>v.hp>0);
     const genTabs = document.getElementById('gen-tabs'), bottomBar = document.getElementById('bottom-bar');
     if(!genTabs || !bottomBar) return;
-
-    // 1. 生成分頁
+    let aliveV = villagers.filter(v=>v.hp>0);
+    
+    // 1. 生成分頁按鈕
     let gens = ['All', ...new Set(aliveV.map(v=>v.gen))].sort((a,b)=>a-b);
     genTabs.innerHTML = '';
     gens.forEach(g => {
         let btn = document.createElement('div'); btn.className = `tab-btn ${currentTab == g ? 'active' : ''}`;
         btn.innerText = g == 'All' ? '全部' : `G${g}`; 
-        btn.onclick = (e) => { e.stopPropagation(); currentTab = g; syncBottomBar(); }; 
+        btn.onclick = (e) => { e.stopPropagation(); currentTab = g; syncBottomBar(); };
         genTabs.appendChild(btn);
     });
 
