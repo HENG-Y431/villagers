@@ -1,30 +1,26 @@
-/* style.css - V7.5 */
+/* style.css - V7.8 數值鑑定版 */
 body { margin: 0; background: #121212; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: #e0e0e0; }
 #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #daa520; color: #00ff00; font-weight: bold; font-size: 0.9em; }
 #game-container { position: relative; flex-grow: 1; height: 100vh; background: #1a1a1a; }
 canvas { display: block; }
 
-#admin-footer { position: absolute; bottom: 0; left: 0; right: 280px; height: 110px; background: rgba(20, 20, 20, 0.98); border-top: 2px solid #daa520; display: flex; z-index: 60; }
-#footer-left { flex-grow: 1; display: flex; flex-direction: column; border-right: 1px solid #444; overflow: hidden; }
+#admin-footer { position: absolute; bottom: 0; left: 0; right: 280px; height: 115px; background: rgba(15, 15, 15, 0.98); border-top: 2px solid #daa520; display: flex; z-index: 60; }
+#footer-left { flex-grow: 1; display: flex; flex-direction: column; border-right: 1px solid #333; overflow: hidden; }
 #gen-tabs { display: flex; background: #222; padding: 2px 10px; gap: 5px; border-bottom: 1px solid #333; overflow-x: auto; }
 .tab-btn { padding: 4px 10px; font-size: 0.7em; cursor: pointer; background: #333; color: #aaa; border: 1px solid #444; border-radius: 3px 3px 0 0; }
 .tab-btn.active { background: #daa520; color: #000; font-weight: bold; }
 #bottom-bar { display: flex; align-items: center; padding: 10px 15px; gap: 8px; overflow-x: auto; flex-grow: 1; }
 #bottom-bar::-webkit-scrollbar { height: 8px; }
 #bottom-bar::-webkit-scrollbar-thumb { background: #daa520; border-radius: 4px; }
-
 .v-btn { padding: 6px 12px; background: #333; border: 1px solid #555; border-radius: 4px; color: #fff; cursor: pointer; white-space: nowrap; font-size: 0.75em; font-weight: bold; flex-shrink: 0; }
 .v-btn.selected { border-color: #00ff00; box-shadow: 0 0 8px #00ff00; }
 .v-btn.male { border-left: 3px solid #3498db; }
 .v-btn.female { border-left: 3px solid #e84393; }
 
-#notice-board { width: 380px; height: 100%; background: #0a0a0a; overflow-y: auto; padding: 8px; font-size: 0.72em; color: #eee; line-height: 1.5; box-sizing: border-box; }
-#notice-board div { border-bottom: 1px solid #1a1a1a; padding-bottom: 3px; margin-bottom: 5px; animation: fadeIn 0.3s; }
-@keyframes fadeIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
-.notice-time { color: #daa520; font-family: monospace; margin-right: 6px; }
-.notice-birth { color: #4caf50; font-weight: bold; }
-.notice-death { color: #ff4d4d; }
-.notice-elder { color: #00ff00; text-shadow: 0 0 5px rgba(0,255,0,0.3); }
+#notice-board { width: 350px; height: 100%; background: #000; overflow-y: auto; padding: 10px; font-size: 0.7em; color: #eee; line-height: 1.4; box-sizing: border-box; }
+#notice-board div { border-bottom: 1px solid #1a1a1a; padding-bottom: 4px; margin-bottom: 4px; }
+.notice-time { color: #888; margin-right: 6px; font-family: monospace; }
+.notice-birth { color: #4caf50; } .notice-death { color: #ff4d4d; } .notice-elder { color: #ffd700; font-weight: bold; }
 
 #god-panel { width: 280px; background: #1e1e1e; border-left: 2px solid #333; padding: 12px; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; height: 100vh; }
 .stat-card { background: #2d2d2d; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #444; font-size: 0.8em; color: #ffd700; }
@@ -34,11 +30,17 @@ canvas { display: block; }
 .btn-desc { font-size: 0.6em; color: #888; margin-top: 4px; text-align: center; }
 
 #status-window { margin-top: auto; background: #000; border: 1px solid #daa520; padding: 10px; display: none; border-radius: 8px; font-size: 0.8em; }
-#v-social-box { max-height: 120px; overflow-y: auto; margin: 8px 0; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 5px 0; }
-.rel-group { margin-bottom: 6px; }
-.rel-header { font-size: 0.7em; font-weight: bold; margin-bottom: 2px; }
+#v-social-box { max-height: 100px; overflow-y: auto; margin: 8px 0; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 5px 0; }
+.rel-group { margin-bottom: 6px; } .rel-header { font-size: 0.7em; font-weight: bold; margin-bottom: 2px; }
 .rel-tag { font-size: 0.7em; padding: 1px 4px; border-radius: 3px; background: #222; border: 1px solid #444; margin-right: 3px; display: inline-block; }
 .type-lover { color: #ff69b4; } .type-family { color: #999; } .type-friend { color: #3498db; } .type-mentor { color: #9b59b6; }
-.attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.7em; color: #aaa; }
+
+/* 屬性格：改為單欄以容納長備註 */
+.attr-grid { display: grid; grid-template-columns: 1fr; gap: 5px; font-size: 0.75em; color: #aaa; margin-top: 5px; }
+.attr-label { font-size: 0.85em; margin-left: 4px; }
+.rank-rare { color: #ffd700; font-weight: bold; } /* 稀有：金色 */
+.rank-good { color: #4caf50; } /* 優秀/超群：綠色 */
+.rank-poor { color: #888; } /* 不良/缺陷：灰色 */
+
 .bar { width: 100%; height: 5px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; }
 .bar-fill { height: 100%; transition: width 0.3s; }
