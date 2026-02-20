@@ -1,7 +1,7 @@
-/* script.js - V7.8 CoC6 鑑定版 */
+/* script.js - V8.0 */
 let villagers = [], environment = [], selectedId = null, totalMinutes = 0, genCounters = {};
 let deathCount = 0, currentTab = 'All', plagueZone = null;
-const TILE_SIZE = 45, SOCIAL_RANGE = 80, MINS_IN_YEAR = 60 * 24 * 30 * 12;
+const TILE_SIZE = 45, SOCIAL_RANGE = 90, MINS_IN_YEAR = 60 * 24 * 30 * 12;
 
 window.onload = function() {
     const canvas = document.getElementById('worldCanvas');
@@ -13,7 +13,6 @@ window.onload = function() {
     const socialBox = document.getElementById('v-social-box');
     const noticeBoard = document.getElementById('notice-board');
 
-    // 新增：CoC6 鑑定函數
     function getCoC6Label(val) {
         if (val <= 5) return { txt: "嚴重缺陷", cls: "rank-poor" };
         if (val <= 7) return { txt: "非常不良", cls: "rank-poor" };
@@ -26,8 +25,7 @@ window.onload = function() {
 
     function addNotice(msg, typeClass = "") {
         if (!noticeBoard) return;
-        let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1;
-        let mths = Math.floor((totalMinutes/(60*24*30))%12)+1;
+        let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1;
         let div = document.createElement('div');
         div.innerHTML = `<span class="notice-time">${yrs}年${mths}月</span> <span class="${typeClass}">${msg}</span>`;
         noticeBoard.prepend(div);
@@ -41,6 +39,7 @@ window.onload = function() {
         return s.toString().padStart(2, '0');
     }
 
+    // 避親檢查 (僅用於師生關係)
     function isDirectLineage(v1, v2, depth = 1) {
         if (depth > 3 || !v1 || !v2) return false;
         if (v1.fatherId === v2.id || v1.motherId === v2.id) return true;
@@ -63,7 +62,7 @@ window.onload = function() {
             let v = new Villager(canvas, 1, (i < 2 ? "男" : "女"), false, null, null, "無", "無", null, null, 20);
             v.isElder = true; villagers.push(v);
         }
-        addNotice("文明重建：始祖長老降臨。", "notice-elder");
+        addNotice("文明起源：四位始祖長老 👑 降臨。", "notice-elder");
         syncBottomBar();
     }
 
@@ -78,8 +77,21 @@ window.onload = function() {
             this.fatherId = fId; this.motherId = mId;
             this.birthTime = totalMinutes - (startAge * MINS_IN_YEAR);
             this.age = startAge;
-            this.str = 3 + Math.floor(Math.random()*16); this.con = 3 + Math.floor(Math.random()*16);
-            this.siz = 8 + Math.floor(Math.random()*11); this.dex = 3 + Math.floor(Math.random()*16);
+            this.lastGrowthAge = Math.floor(startAge / 10) * 10;
+
+            const p1 = villagers.find(v => v.id === fId), p2 = villagers.find(v => v.id === mId);
+            const rollStat = (p1Stat, p2Stat) => {
+                if (!p1Stat || !p2Stat) return 3 + Math.floor(Math.random() * 16);
+                let base = (p1Stat + p2Stat) / 2;
+                let mutation = Math.floor(Math.random() * 5) - 2;
+                return Math.max(3, Math.min(18, Math.floor(base + mutation)));
+            };
+
+            this.str = rollStat(p1?.str, p2?.str);
+            this.con = rollStat(p1?.con, p2?.con);
+            this.siz = rollStat(p1?.siz, p2?.siz);
+            this.dex = rollStat(p1?.dex, p2?.dex);
+
             this.personality = (this.str + this.dex > 25) ? "積極" : (this.con < 10 ? "懶惰" : "普通");
             this.maxHp = Math.ceil((this.con + this.siz) / 2);
             this.hp = this.maxHp; this.hunger = 80; this.energy = 80;
@@ -92,6 +104,13 @@ window.onload = function() {
         update() {
             if(this.hp <= 0) return;
             this.age = (totalMinutes - this.birthTime) / MINS_IN_YEAR;
+            
+            let currentDecade = Math.floor(this.age / 10) * 10;
+            if (currentDecade > this.lastGrowthAge && this.age < 80) {
+                this.lastGrowthAge = currentDecade;
+                if (Math.random() < 0.3) this.evolveRandomStat(false);
+            }
+
             this.hunger -= 0.008; this.energy -= 0.008;
             if(this.mateCooldown > 0) this.mateCooldown--;
             if(this.plagueTimer > 0) this.plagueTimer--;
@@ -119,6 +138,17 @@ window.onload = function() {
             }
         }
 
+        evolveRandomStat(isDivine = false) {
+            const stats = ['str', 'con', 'siz', 'dex'];
+            let s = stats[Math.floor(Math.random() * stats.length)];
+            if (this[s] < 18) {
+                this[s] += 1;
+                if (s === 'con' || s === 'siz') this.maxHp = Math.ceil((this.con + this.siz) / 2);
+                if (isDivine) addNotice(`✨ 神蹟：${this.name} 的 ${s.toUpperCase()} 提升！`, "notice-elder");
+                else addNotice(`📈 成長：${this.name} 提升了 ${s.toUpperCase()}。`, "");
+            }
+        }
+
         passElderTitle() {
             this.isElder = false;
             let p = villagers.filter(v => v.hp > 0 && v.age >= 18 && !v.isElder);
@@ -128,44 +158,56 @@ window.onload = function() {
             }
         }
 
+        // --- 核心修改：血脈解鎖與社交優化 ---
         socialCycle() {
             villagers.forEach(o => {
                 if(o === this || o.hp <= 0) return;
                 if(Math.hypot(this.x-o.x, this.y-o.y) < SOCIAL_RANGE) {
                     if(!this.rels[o.id]) this.rels[o.id] = { score: 0, type: '陌生人', name: o.name };
                     if(!o.rels[this.id]) o.rels[this.id] = { score: 0, type: '陌生人', name: this.name };
+                    
                     let r = this.rels[o.id];
-                    if (['父親','母親','子女'].includes(r.type)) return;
-                    r.score += 0.2; o.rels[this.id].score += 0.2;
-                    if(this.age > 40 && o.age < 18 && !isDirectLineage(this, o)) { r.type = '師生'; o.rels[this.id].type = '師生'; }
-                    else if(r.score > 20 && (r.type === '陌生人' || r.type === '師生')) {
+                    r.score += 0.5; o.rels[this.id].score += 0.5; // 分數增加速度提升
+                    
+                    // 1. 判定師生 (僅此項保留血脈避親)
+                    if(this.age > 40 && o.age < 18 && !isDirectLineage(this, o)) {
+                        r.type = '師生'; o.rels[this.id].type = '師生';
+                    }
+                    // 2. 判定朋友與戀人 (不再判定血脈，只要分數達標)
+                    else if(r.score > 10 && (r.type === '陌生人' || r.type === '師生')) {
                         if(this.age >= 18 && o.age >= 18) {
                             let roll = Math.random();
-                            if(this.gender !== o.gender) r.type = (roll < 0.7) ? '戀人' : '朋友';
+                            // 異性有 85% 機率變戀人
+                            if(this.gender !== o.gender) r.type = (roll < 0.85) ? '戀人' : '朋友';
                             else r.type = (roll < 0.2) ? '戀人' : '朋友';
                         } else { r.type = '朋友'; }
                         o.rels[this.id].type = r.type;
                     }
+                    
                     if(r.type === '戀人' && this.gender !== o.gender && this.mateCooldown <= 0 && o.mateCooldown <= 0 && this.hunger > 65) this.reproduce(o);
                 }
             });
         }
+
         reproduce(o) {
             this.mateCooldown = 5000; o.mateCooldown = 5000;
             let baby = new Villager(canvas, Math.max(this.gen, o.gen)+1, (Math.random()>0.5?"男":"女"), true, this.x, this.y, (this.gender==="男"?this.name:o.name), (this.gender==="女"?this.name:o.name), (this.gender==="男"?this.id:o.id), (this.gender==="女"?this.id:o.id));
             this.rels[baby.id] = { score: 100, type: '子女', name: baby.name }; o.rels[baby.id] = { score: 100, type: '子女', name: baby.name };
-            villagers.push(baby); addNotice(`👶 誕生：${baby.name} 加入部落。`, "notice-birth"); syncBottomBar();
+            villagers.push(baby); addNotice(`👶 誕生：G${baby.gen}代 ${baby.name} 加入部落。`, "notice-birth"); syncBottomBar();
         }
+
         findRes() {
             let t = environment.find(e => e.type !== 'grass' && Math.abs(e.x-this.x)<30 && Math.abs(e.y-this.y)<30);
             if(t) this.hunger = Math.min(100, this.hunger + (this.str/60));
         }
+
         move(spd) {
             this.x += Math.cos(this.angle)*spd; this.y += Math.sin(this.angle)*spd;
             if(Math.random()<0.02) this.angle += (Math.random()-0.5);
             if(this.x < 15 || this.x > canvas.width-15) this.angle = Math.PI - this.angle;
             if(this.y < 50 || this.y > canvas.height - 115 - 15) this.angle = -this.angle;
         }
+
         draw(ctx) {
             if(this.hp <= 0) { ctx.fillStyle="#333"; ctx.fillRect(this.x-5,this.y-5,10,10); return; }
             let r = (this.age < 18) ? 6 : (10 + this.siz/2.5);
@@ -194,6 +236,7 @@ window.onload = function() {
     }
 
     window.castPlague = () => { if(plagueZone) return; plagueZone = { x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: 100 }; addNotice("⚠️ 天罰！瘟疫在隨機處爆發。", "notice-death"); setTimeout(()=>plagueZone=null, 5000); };
+    
     window.castMiracle = (t) => {
         if (t === 'food') {
             villagers.forEach(v => { if(v.hp > 0) v.hunger = 100; });
@@ -201,9 +244,8 @@ window.onload = function() {
         } else {
             if (!selectedId) { alert("請先點擊小人目標！"); return; }
             let v = villagers.find(v => v.id === selectedId && v.hp > 0);
-            if (v) { v.hp = v.maxHp; v.plagueTimer = 0; addNotice(`✨ 神蹟：${v.name} 獲得神聖治癒。`, "notice-elder"); }
+            if (v) { v.hp = v.maxHp; v.plagueTimer = 0; v.evolveRandomStat(true); syncBottomBar(); }
         }
-        syncBottomBar();
     };
 
     window.resetWorld = () => { if(confirm("重啟文明？")) init(); };
@@ -218,8 +260,7 @@ window.onload = function() {
             ctx.fillStyle = "#0f0"; ctx.font = "bold 14px Arial"; ctx.fillText("⚠ 瘟疫爆發", plagueZone.x - 35, plagueZone.y - 120);
         }
         
-        totalMinutes += 250; // 加速至 250
-        
+        totalMinutes += 250; 
         let yrs = Math.floor(totalMinutes/MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1;
         let hrs = Math.floor((totalMinutes/60)%24), mins = Math.floor(totalMinutes%60);
         timeDisplay.innerText = `世界曆 第 ${yrs} 年 ${mths} 月 | ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
@@ -236,7 +277,6 @@ window.onload = function() {
                 document.getElementById('v-personality').innerText = "性格："+v.personality;
                 document.getElementById('v-father').innerText = v.father; document.getElementById('v-mother').innerText = v.mother;
                 
-                // --- 核心修改：屬性鑑定顯示邏輯 ---
                 let s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
                 document.getElementById('attr-str').innerHTML = `STR: ${v.str} <span class="attr-label ${s.cls}">(${s.txt})</span>`;
                 document.getElementById('attr-con').innerHTML = `CON: ${v.con} <span class="attr-label ${c.cls}">(${c.txt})</span>`;
