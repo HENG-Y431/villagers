@@ -1,6 +1,4 @@
 /* script.js - 世界引擎：UI、時間與神權 */
-let villagers = [], environment = [], selectedId = null, matchId = null, totalMinutes = 0, genCounters = {};
-let deathCount = 0, currentTab = 'All', plagueZone = null, gracePoints = CONFIG.INITIAL_GRACE;
 
 window.onload = function() {
     const canvas = document.getElementById('worldCanvas');
@@ -21,7 +19,6 @@ window.onload = function() {
         syncBottomBar();
     }
 
-    // 神權函數
     window.castMiracle = (t) => {
         if (t === 'food') {
             if (gracePoints < CONFIG.COST_FOOD) { alert(`神恩不足 (${CONFIG.COST_FOOD}pt)`); return; }
@@ -54,7 +51,8 @@ window.onload = function() {
         ctx.fillStyle = "#1e301e"; ctx.fillRect(0,0,canvas.width, canvas.height);
         environment.forEach(t => { ctx.fillStyle = (t.type === 'water' ? "#2a5a7a" : (t.type === 'forest' ? "#145a32" : "#2d4a2d")); ctx.fillRect(t.x, t.y, TILE_SIZE-1, TILE_SIZE-1); });
         if (plagueZone) {
-            ctx.fillStyle = "rgba(0, 255, 0, 0.2)"; ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, 100, 0, Math.PI*2); ctx.fill();
+            let p = Math.sin(Date.now() / 200) * 10;
+            ctx.fillStyle = "rgba(0, 255, 0, 0.25)"; ctx.beginPath(); ctx.arc(plagueZone.x, plagueZone.y, 100 + p, 0, Math.PI*2); ctx.fill();
         }
         
         let oldY = Math.floor(totalMinutes/CONFIG.MINS_IN_YEAR);
@@ -79,6 +77,7 @@ window.onload = function() {
                 document.getElementById('v-father').innerText = v.father; document.getElementById('v-mother').innerText = v.mother;
                 
                 let s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
+                // --- 關鍵修正：修正屬性讀取錯誤，解決黑畫面 ---
                 document.getElementById('attr-str').innerHTML = `力量 (STR): ${v.str} <span class="attr-label ${s.cls}">(${s.txt})</span>`;
                 document.getElementById('attr-con').innerHTML = `體質 (CON): ${v.con} <span class="attr-label ${c.cls}">(${c.txt})</span>`;
                 document.getElementById('attr-siz').innerHTML = `體型 (SIZ): ${v.siz} <span class="attr-label ${z.cls}">(${z.txt})</span>`;
@@ -113,6 +112,45 @@ window.onload = function() {
     });
     init(); loop();
 };
+
+const TILE_SIZE = 45;
+
+function updateGrace(amount, reason = "") {
+    gracePoints += amount;
+    const graceDisplay = document.getElementById('grace-points');
+    if(graceDisplay) graceDisplay.innerText = Math.floor(gracePoints);
+    if (amount > 0 && reason) addNotice(`✨ 獲得神恩：${reason} (+${amount})`, "notice-elder");
+}
+
+function addNotice(msg, typeClass = "") {
+    const noticeBoard = document.getElementById('notice-board');
+    if (!noticeBoard) return;
+    let yrs = Math.floor(totalMinutes/CONFIG.MINS_IN_YEAR)+1, mths = Math.floor((totalMinutes/(60*24*30))%12)+1;
+    let div = document.createElement('div');
+    div.innerHTML = `<span class="notice-time">${yrs}年${mths}月</span> <span class="${typeClass}">${msg}</span>`;
+    noticeBoard.prepend(div);
+    if (noticeBoard.childNodes.length > 50) noticeBoard.removeChild(noticeBoard.lastChild);
+}
+
+function getCoC6Label(val) {
+    if (val <= 5) return { txt: "嚴重缺陷", cls: "rank-poor" };
+    if (val <= 7) return { txt: "非常不良", cls: "rank-poor" };
+    if (val <= 9) return { txt: "稍弱", cls: "" };
+    if (val <= 11) return { txt: "正常人", cls: "" };
+    if (val <= 13) return { txt: "比一般人優秀", cls: "rank-good" };
+    if (val <= 15) return { txt: "非常超群", cls: "rank-good" };
+    return { txt: "稀有", cls: "rank-rare" };
+}
+
+function isDirectLineage(v1, v2, depth = 1) {
+    if (depth > 3 || !v1 || !v2) return false;
+    if (v1.fatherId === v2.id || v1.motherId === v2.id) return true;
+    if (v2.fatherId === v1.id || v2.motherId === v1.id) return true;
+    let v1F = villagers.find(v => v.id === v1.fatherId), v1M = villagers.find(v => v.id === v1.motherId);
+    if (v1F && isDirectLineage(v1F, v2, depth + 1)) return true;
+    if (v1M && isDirectLineage(v1M, v2, depth + 1)) return true;
+    return false;
+}
 
 function syncBottomBar() {
     let aliveV = villagers.filter(v=>v.hp>0);
