@@ -2,11 +2,11 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V9.3 - 模組化穩定版</title>
+    <title>Underworld V9.5 </title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="top-bar">世界時間：<span id="world-time">秩序校準中...</span></div>
+<div id="top-bar">時間：<span id="world-time">校準中...</span></div>
 <div id="game-container">
     <canvas id="worldCanvas"></canvas>
     <div id="admin-footer">
@@ -37,8 +37,7 @@
             <strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong>
             <span id="v-age" style="color: #4caf50;">0 歲</span>
         </div>
-        <div id="v-elder-tag">✨ 部落長老 ✨</div>
-        <div id="v-personality">性格：載入中</div>
+        <div id="v-personality" style="color: #00ff00; font-size: 0.75em; margin-bottom: 5px;">性格：載入中</div>
         <div class="lineage-text">父：<span id="v-father"></span> | 母：<span id="v-mother"></span></div>
         <div id="v-social-box"></div>
         <div class="attr-grid">
@@ -52,7 +51,7 @@
             <div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div>
         </div>
     </div>
-    <button onclick="resetWorld()" style="width:100%; margin-top:15px; font-size:0.7em; color:#555; background:none; border:1px solid #333; cursor:pointer;">重啟</button>
+    <button onclick="resetWorld()" style="width:100%; margin-top:15px; font-size:0.7em; color:#555; background:none; border:1px solid #333; cursor:pointer;">文明歸零重啟</button>
 </div>
 
 <script src="config.js"></script>
