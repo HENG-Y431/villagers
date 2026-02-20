@@ -1,4 +1,4 @@
-/* villager.js - 村民底層邏輯 遺傳、社交與生命規律 */
+/* villager.js - 村民生命行為 */
 class Villager {
     constructor(cvs, gen, gender, isBaby, x, y, fName, mName, fId, mId, startAge) {
         this.id = Math.random().toString(36).substr(2, 9);
@@ -22,15 +22,13 @@ class Villager {
         this.siz = roll(p1?.siz, p2?.siz); this.dex = roll(p1?.dex, p2?.dex);
 
         this.isHero = false; this.checkHero();
-        this.updatePersonality(); // 修正性格顯示
+        this.updatePersonality(); // 修正：出生即決定性格
 
         this.maxHp = Math.ceil((this.con + this.siz) / 2);
         this.hp = this.maxHp; this.hunger = 80; this.rels = {}; 
         this.isElder = false; this.plagueTimer = 0;
         this.angle = Math.random()*Math.PI*2;
-
-        // 始祖長老初始冷卻 1 年 (約 2100 幀)
-        this.mateCooldown = isBaby ? 0 : 2100; 
+        this.mateCooldown = isBaby ? 0 : 2100; // 始祖冷卻 1 年
     }
 
     checkHero() {
@@ -57,7 +55,6 @@ class Villager {
         if(this.hp <= 0) return;
         this.age = (totalMinutes - this.birthTime) / CONFIG.MINS_IN_YEAR;
         if (!this.isAdultAwarded && this.age >= 13) { this.isAdultAwarded = true; updateGrace(20, `${this.name} 成年`); }
-        
         let currentDecade = Math.floor(this.age / 10) * 10;
         if (currentDecade > this.lastGrowthAge && this.age < 80) {
             this.lastGrowthAge = currentDecade;
@@ -72,16 +69,14 @@ class Villager {
         else {
             if(this.age < 13) {
                 let p = villagers.find(v => v.id === this.motherId && v.hp > 0) || villagers.find(v => v.id === this.fatherId && v.hp > 0);
-                if(p) {
-                    this.angle = Math.atan2(p.y - this.y, p.x - this.x); this.move(0.45);
-                    if(Math.hypot(this.x - p.x, this.y - p.y) < 20) this.hunger = Math.min(100, this.hunger + 0.015);
-                } else this.move(0.3);
+                if(p) { this.angle = Math.atan2(p.y - this.y, p.x - this.x); this.move(0.45); if(Math.hypot(this.x - p.x, this.y - p.y) < 20) this.hunger = Math.min(100, this.hunger + 0.015); }
+                else this.move(0.3);
             } else { this.move(this.personality === "積極" ? 0.6 : 0.4); }
         }
         if(this.hunger <= 0) this.hp -= 0.04;
         if(this.age > 85 || this.hp <= 0) {
             this.hp = 0; deathCount++;
-            if (this.age >= 80) updateGrace(100, `${this.name} 壽終正寢`);
+            if (this.age >= 80) updateGrace(100, "壽終正寢");
             addNotice(`☠️ ${this.isElder?"長老 ":"村民 "}${this.name} 離世。`, "notice-death");
             if(this.isElder) this.passElderTitle(); syncBottomBar();
         }
@@ -114,7 +109,7 @@ class Villager {
         let baby = new Villager(window.cvsGlobal, Math.max(this.gen, o.gen)+1, (Math.random()>0.5?"男":"女"), true, this.x, this.y, (this.gender==="男"?this.name:o.name), (this.gender==="女"?this.name:o.name), (this.gender==="男"?this.id:o.id), (this.gender==="女"?this.id:o.id));
         this.rels[baby.id] = { score: 100, type: '子女', name: baby.name }; o.rels[baby.id] = { score: 100, type: '子女', name: baby.name };
         villagers.push(baby); 
-        if (baby.isHero) { addNotice(`🌟 神蹟：傳奇人物 ${baby.name} 誕生！`, "notice-hero"); updateGrace(150, "天選誕生"); }
+        if (baby.isHero) { addNotice(`🌟 神蹟：傳奇人物 ${baby.name} 降臨！`, "notice-hero"); updateGrace(150, "傳奇誕生"); }
         else { addNotice(`👶 誕生：G${baby.gen}代 ${baby.name} 出生。`, "notice-birth"); updateGrace(10, "新命降臨"); }
         syncBottomBar();
     }
@@ -126,7 +121,7 @@ class Villager {
             this[s] += 1;
             if (s === 'con' || s === 'siz') this.maxHp = Math.ceil((this.con + this.siz) / 2);
             this.updatePersonality();
-            if (this.checkHero()) { updateGrace(50, "覺醒神選"); addNotice(`🌟 覺醒：${this.name} 突破極限成就神選！`, "notice-hero"); }
+            if (this.checkHero()) { updateGrace(50, "覺醒神選"); addNotice(`🌟 覺醒：${this.name} 成就傳奇！`, "notice-hero"); }
             const trans = { str:'力量', con:'體質', siz:'體型', dex:'敏捷' };
             if (isDivine) addNotice(`✨ 神蹟：${this.name} 的 ${trans[s]} 提升！`, "notice-elder");
             else addNotice(`📈 成長：${this.name} 提升了 ${trans[s]}。`, "");
@@ -163,7 +158,6 @@ class Villager {
         }
         if(this.isElder) { ctx.strokeStyle = "#daa520"; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.arc(this.x, this.y, r + 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
         if(selectedId === this.id) { ctx.strokeStyle="#0f0"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(this.x,this.y,r+6,0,Math.PI*2); ctx.stroke(); }
-        if(matchId === this.id) { ctx.strokeStyle="#ff69b4"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(this.x,this.y,r+10,0,Math.PI*2); ctx.stroke(); }
         ctx.fillStyle = (this.plagueTimer > 0) ? "#4a148c" : (this.gender === "男" ? "#3498db" : "#e84393");
         ctx.beginPath(); ctx.arc(this.x,this.y,r,0,Math.PI*2); ctx.fill();
         ctx.fillStyle = "white"; ctx.font = "10px Arial"; ctx.fillText((this.isHero?"✨":"")+(this.isElder?"👑":"")+this.name, this.x-10, this.y-r-5);
