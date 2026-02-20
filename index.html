@@ -2,34 +2,26 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>文明演變沙盒 - Underworld V1.1</title>
+    <title>Underworld - 創世四人組</title>
     <style>
         body { margin: 0; background: #222; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: white; }
-        
-        /* 頂部時間列 */
         #top-bar {
             position: absolute; top: 0; left: 0; right: 250px; height: 40px;
-            background: rgba(0,0,0,0.6); display: flex; align-items: center;
+            background: rgba(0,0,0,0.8); display: flex; align-items: center;
             justify-content: center; z-index: 50; border-bottom: 1px solid #444;
             font-size: 1.1em; letter-spacing: 2px; color: #00ff00;
         }
-
         #game-container { position: relative; flex-grow: 1; height: 100vh; background: #2e4d2e; cursor: crosshair; }
         canvas { display: block; margin-top: 40px; }
-
-        /* 神之操控面板 */
-        #god-panel { width: 250px; background: #1a1a1a; border-left: 2px solid #333; padding: 15px; z-index: 100; }
+        #god-panel { width: 250px; background: #1a1a1a; border-left: 2px solid #333; padding: 15px; z-index: 100; box-sizing: border-box; }
         h2 { color: #ffd700; font-size: 1.2em; border-bottom: 1px solid #555; padding-bottom: 10px; }
         .stat-group { margin-bottom: 15px; font-size: 0.9em; line-height: 1.6; }
         button { width: 100%; padding: 10px; margin: 5px 0; cursor: pointer; background: #333; color: white; border: 1px solid #555; transition: 0.2s; }
         button:hover { background: #555; border-color: #ffd700; }
         button.danger { color: #ff6666; }
-
-        /* 村民狀態視窗 */
         #status-window { 
             position: absolute; width: 200px; background: rgba(0, 0, 0, 0.85); border: 1px solid #ffd700; 
             padding: 12px; display: none; pointer-events: none; border-radius: 8px; font-size: 0.9em; z-index: 1000;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
         .bar { width: 100%; height: 6px; background: #444; margin: 5px 0; border-radius: 3px; }
         .bar-fill { height: 100%; width: 0%; transition: width 0.3s; border-radius: 3px; }
@@ -37,9 +29,7 @@
 </head>
 <body>
 
-<div id="top-bar">
-    <span id="world-time">世界日期：第 1 天 00:00</span>
-</div>
+<div id="top-bar"><span id="world-time">載入中...</span></div>
 
 <div id="game-container">
     <canvas id="worldCanvas"></canvas>
@@ -55,17 +45,17 @@
     <h2>神之權限 (System)</h2>
     <div class="stat-group">
         人口總數：<span id="pop-count">0</span><br>
-        文明儲備：<span id="res-count">0</span>
+        文明資源：<span id="res-count">0</span>
     </div>
-    
     <hr>
     <h3>資源調度</h3>
-    <button onclick="dispatchResource('food')">投放聖餐 (+50 食物)</button>
-    <button onclick="dispatchResource('wood')">賜予木材 (+50 材料)</button>
-    
+    <button onclick="dispatchResource('food')">投放聖餐 (+50)</button>
+    <button onclick="dispatchResource('wood')">賜予木材 (+50)</button>
     <h3>災難管理</h3>
-    <button class="danger" onclick="triggerDisaster('lightning')">降下雷擊 (懲罰)</button>
-    <button class="danger" onclick="triggerDisaster('famine')">開啟荒年 (考驗)</button>
+    <button class="danger" onclick="triggerDisaster('lightning')">降下雷擊</button>
+    <button class="danger" onclick="triggerDisaster('famine')">開啟荒年</button>
+    <hr>
+    <button class="danger" style="margin-top:20px; border: 1px double #f66;" onclick="resetGame()">重置世界 (New Game)</button>
 </div>
 
 <script>
@@ -79,8 +69,6 @@
     let villagers = [];
     let globalResources = 100;
     let selectedVillager = null;
-    
-    // 時間系統：1秒 = 1小時 (1幀 = 1分鐘)
     let totalMinutes = 0;
 
     function resize() {
@@ -94,96 +82,81 @@
         constructor(x, y) {
             this.x = x;
             this.y = y;
+            // 每次建立時隨機分配性別
             this.gender = Math.random() > 0.5 ? "男" : "女";
-            this.name = (this.gender === "男" ? "男性" : "女性") + "小人 #" + Math.floor(Math.random() * 999);
+            this.name = (this.gender === "男" ? "亞當" : "夏娃") + "-" + Math.floor(Math.random() * 99);
             this.health = 100;
-            this.hunger = 100; // 從飽足開始
+            this.hunger = 100;
             this.action = "漫步";
-            this.size = 12; // 加大體型
-            this.speed = 0.3 + Math.random() * 0.4; // 降低速度
+            this.size = 14; 
+            this.speed = 0.4 + Math.random() * 0.3;
             this.angle = Math.random() * Math.PI * 2;
         }
 
         update() {
-            // 平滑轉向移動
             if (Math.random() < 0.01) this.angle += (Math.random() - 0.5);
             this.x += Math.cos(this.angle) * this.speed;
             this.y += Math.sin(this.angle) * this.speed;
 
-            // 碰撞邊界
             if (this.x < 20 || this.x > canvas.width - 20) this.angle = Math.PI - this.angle;
             if (this.y < 20 || this.y > canvas.height - 20) this.angle = -this.angle;
 
-            // 狀態隨時間下降
-            this.hunger -= 0.02; 
-            if (this.hunger <= 0) {
-                this.hunger = 0;
-                this.health -= 0.05;
-            }
-            
-            this.action = this.hunger < 30 ? "尋找食物" : "漫步中";
+            this.hunger -= 0.015; 
+            if (this.hunger <= 0) { this.hunger = 0; this.health -= 0.04; }
+            this.action = this.hunger < 40 ? "尋找食物" : "漫步中";
         }
 
         draw() {
             ctx.save();
-            // 選取時的外框特效
             if (selectedVillager === this) {
                 ctx.strokeStyle = "#fff";
                 ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size + 4, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size + 5, 0, Math.PI * 2); ctx.stroke();
             }
-
-            // 性別顏色：男-淺藍，女-淺粉
-            ctx.fillStyle = (this.gender === "男") ? "#87CEEB" : "#FFB6C1";
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            ctx.fill();
+            // 男：淡藍，女：粉紅
+            ctx.fillStyle = (this.gender === "男") ? "#7ebce6" : "#f2a7b5";
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
             ctx.restore();
         }
     }
 
-    // 初始化村民
-    for(let i=0; i<12; i++) {
-        villagers.push(new Villager(Math.random()*canvas.width, Math.random()*canvas.height));
+    function initGame() {
+        villagers = [];
+        globalResources = 100;
+        totalMinutes = 0;
+        selectedVillager = null;
+        statusWindow.style.display = 'none';
+        for(let i=0; i<4; i++) {
+            villagers.push(new Villager(Math.random()*canvas.width, Math.random()*canvas.height));
+        }
     }
 
-    function updateWorldTime() {
-        totalMinutes++;
-        let days = Math.floor(totalMinutes / 1440) + 1;
-        let hours = Math.floor((totalMinutes % 1440) / 60);
-        let mins = totalMinutes % 60;
-        timeDisplay.innerText = `世界日期：第 ${days} 天 ${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
+    function resetGame() {
+        if(confirm("確定要重置這個世界嗎？所有的文明紀錄將會消失。")) initGame();
     }
 
     function loop() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        updateWorldTime();
+        totalMinutes++;
+        let days = Math.floor(totalMinutes / 1440) + 1;
+        let hrs = Math.floor((totalMinutes % 1440) / 60);
+        let mins = totalMinutes % 60;
+        timeDisplay.innerText = `世界日期：第 ${days} 天 ${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
+
         villagers = villagers.filter(v => v.health > 0);
-        
-        villagers.forEach(v => {
-            v.update();
-            v.draw();
-        });
+        villagers.forEach(v => { v.update(); v.draw(); });
 
         popDisplay.innerText = villagers.length;
         resDisplay.innerText = Math.floor(globalResources);
-        
         if (selectedVillager) updateStatusWindow();
         requestAnimationFrame(loop);
     }
 
-    // 優化後的點擊判定
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        // 加大判定半徑至 25 像素，更好點擊
-        let found = villagers.find(v => Math.hypot(v.x - mouseX, v.y - (mouseY - 40)) < 25);
-
+        const mouseY = e.clientY - (rect.top + 40);
+        let found = villagers.find(v => Math.hypot(v.x - mouseX, v.y - mouseY) < 30);
         if (found) {
             selectedVillager = found;
             statusWindow.style.display = 'block';
@@ -213,10 +186,11 @@
             const targetIdx = Math.floor(Math.random() * villagers.length);
             villagers[targetIdx].health = 0;
         } else if(type === 'famine') {
-            villagers.forEach(v => v.hunger = Math.max(0, v.hunger - 50));
+            villagers.forEach(v => v.hunger = Math.max(0, v.hunger - 40));
         }
     }
 
+    initGame();
     loop();
 </script>
 </body>
