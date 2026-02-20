@@ -2,30 +2,29 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V3.2 - 靈魂與災厄</title>
+    <title>Underworld V3.3 - 社會與繁衍</title>
     <style>
         body { margin: 0; background: #1a1a1a; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: white; }
-        #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 45px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #ffd700; color: #00ff00; font-weight: bold; font-size: 1.2em; text-shadow: 0 0 5px #000; }
+        #top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 40px; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 2px solid #ffd700; color: #00ff00; font-weight: bold; font-size: 1.1em; }
         #game-container { position: relative; flex-grow: 1; height: 100vh; background: #222; }
         canvas { display: block; }
         
-        /* 右側管理面板 */
-        #god-panel { width: 280px; background: #252525; border-left: 2px solid #444; padding: 15px; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; }
-        .stat-card { background: #333; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #444; }
-        h3 { font-size: 1em; margin: 10px 0 5px 0; color: #ffd700; }
-        button { width: 100%; padding: 10px; margin: 5px 0; cursor: pointer; background: #444; color: white; border: 1px solid #666; transition: 0.2s; border-radius: 5px; font-weight: bold; }
+        #god-panel { width: 280px; background: #252525; border-left: 2px solid #444; padding: 12px; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; }
+        .stat-card { background: #333; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #444; font-size: 0.85em; }
+        
+        /* 緊湊型按鈕群組 */
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
+        h3 { font-size: 0.9em; margin: 8px 0 5px 0; color: #ffd700; border-left: 3px solid #ffd700; padding-left: 5px; }
+        button { padding: 6px 2px; cursor: pointer; background: #444; color: white; border: 1px solid #666; transition: 0.2s; border-radius: 4px; font-weight: bold; font-size: 0.8em; }
         button:hover { background: #ffd700; color: #000; }
         button.disaster { color: #ff8888; border-color: #822; }
-        button.disaster:hover { background: #822; color: white; }
         
-        /* 固定在右下角的村民面板 */
         #status-window { 
             margin-top: auto; background: #111; border: 2px solid #ffd700; 
-            padding: 15px; display: none; border-radius: 10px; 
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+            padding: 12px; display: none; border-radius: 10px; font-size: 0.9em;
         }
-        .attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.75em; color: #aaa; margin: 5px 0; }
-        .bar { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 3px; border: 1px solid #444; }
+        .attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.7em; color: #aaa; }
+        .bar { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; border: 1px solid #444; }
         .bar-fill { height: 100%; transition: width 0.3s; }
     </style>
 </head>
@@ -33,40 +32,39 @@
 
 <div id="top-bar">世界曆法：<span id="world-time">08:00</span></div>
 
-<div id="game-container">
-    <canvas id="worldCanvas"></canvas>
-</div>
+<div id="game-container"><canvas id="worldCanvas"></canvas></div>
 
 <div id="god-panel">
-    <h2>管理中心 (Admin)</h2>
+    <h2>管理中心</h2>
     <div class="stat-card">
-        人口：<span id="pop-count">0</span><br>
-        物資：<span id="res-count">100</span>
+        人口：<span id="pop-count">0</span> | 物資：<span id="res-count">100</span>
     </div>
 
-    <h3>降下神蹟</h3>
-    <button onclick="castMiracle('food')">投放聖餐 (+50)</button>
-    <button onclick="castMiracle('energy')">神聖加護 (+40)</button>
+    <h3>神蹟干預</h3>
+    <div class="btn-group">
+        <button onclick="castMiracle('food')">投放聖餐</button>
+        <button onclick="castMiracle('energy')">神聖加護</button>
+    </div>
 
     <h3>降下災厄</h3>
-    <button class="disaster" onclick="castCalamity('disease')">流行疫病 (HP下降)</button>
-    <button class="disaster" onclick="castCalamity('famine')">資源枯竭 (-50物資)</button>
+    <div class="btn-group">
+        <button class="disaster" onclick="castCalamity('disease')">流行疫病</button>
+        <button class="disaster" onclick="castCalamity('famine')">資源枯竭</button>
+    </div>
     
-    <button style="color:#f66; margin-top: 10px; font-size: 0.8em;" onclick="resetWorld()">重啟世界線</button>
+    <button style="color:#f66; font-size: 0.75em;" onclick="resetWorld()">重啟世界線</button>
 
     <div id="status-window">
         <div style="display: flex; justify-content: space-between;">
             <strong id="v-name" style="color: #ffd700;">村民</strong>
-            <span id="v-personality" style="font-size: 0.8em; color: #00ff00;">(積極)</span>
+            <span id="v-personality" style="font-size: 0.8em; color: #0f0;"></span>
         </div>
-        <div id="v-action" style="color: #0f0; font-size: 0.8em; margin: 3px 0;">狀態：觀察中</div>
-        
+        <div id="v-action" style="color: #0f0; font-size: 0.75em;">狀態：載入中</div>
         <div class="attr-grid">
-            <span>STR: <b id="attr-str">?</b></span> <span>CON: <b id="attr-con">?</b></span>
-            <span>SIZ: <b id="attr-siz">?</b></span> <span>DEX: <b id="attr-dex">?</b></span>
+            <span>STR: <b id="attr-str"></b></span> <span>CON: <b id="attr-con"></b></span>
+            <span>SIZ: <b id="attr-siz"></b></span> <span>DEX: <b id="attr-dex"></b></span>
         </div>
-
-        <hr style="border:0; border-top:1px solid #444; margin: 8px 0;">
+        <hr style="border:0; border-top:1px solid #444; margin: 5px 0;">
         HP<div class="bar"><div id="v-health" class="bar-fill" style="background: #ff4d4d;"></div></div>
         飽食<div class="bar"><div id="v-hunger" class="bar-fill" style="background: #ffaa00;"></div></div>
         體力<div class="bar"><div id="v-energy" class="bar-fill" style="background: #00aaff;"></div></div>
@@ -74,9 +72,7 @@
 </div>
 
 <script>
-    let villagers = [], environment = [], selectedId = null;
-    let totalMinutes = 480; 
-    let globalRes = 100;
+    let villagers = [], environment = [], selectedId = null, totalMinutes = 480, globalRes = 100;
     const TILE_SIZE = 45;
 
     window.onload = function() {
@@ -94,119 +90,88 @@
             for(let x=0; x<cols; x++) {
                 for(let y=0; y<rows; y++) {
                     let r = Math.random();
-                    let type = (r < 0.08) ? 'water' : (r < 0.22 ? 'forest' : 'grass');
-                    environment.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: type});
+                    environment.push({x: x*TILE_SIZE, y: y*TILE_SIZE, type: (r < 0.08) ? 'water' : (r < 0.22 ? 'forest' : 'grass')});
                 }
             }
-            villagers = Array.from({length: 4}, () => new Villager(canvas));
+            villagers = [];
+            for(let i=0; i<4; i++) {
+                let v = new Villager(canvas);
+                if(i === 0) v.gender = "男";
+                if(i === 1) v.gender = "女";
+                v.name = (v.gender === "男" ? "亞當" : "夏娃") + "-" + Math.floor(Math.random()*99);
+                villagers.push(v);
+            }
         }
 
         class Villager {
-            constructor(cvs) {
+            constructor(cvs, isBaby = false, x = null, y = null) {
                 this.id = Math.random().toString(36).substr(2, 9);
-                this.x = Math.random() * cvs.width;
-                this.y = Math.random() * cvs.height;
+                this.x = x || Math.random() * cvs.width;
+                this.y = y || Math.random() * cvs.height;
                 this.gender = Math.random() > 0.5 ? "男" : "女";
                 this.name = (this.gender === "男" ? "亞當" : "夏娃") + "-" + Math.floor(Math.random()*99);
-                
-                // COC6 屬性
-                this.str = 3 + Math.floor(Math.random() * 16);
-                this.con = 3 + Math.floor(Math.random() * 16);
-                this.siz = 8 + Math.floor(Math.random() * 11);
-                this.dex = 3 + Math.floor(Math.random() * 16);
-
-                // 人格判定
-                if (this.str + this.dex > 25) this.personality = "積極";
-                else if (this.con < 10 || this.siz > 15) this.personality = "懶惰";
-                else if (this.dex > 12 && this.siz < 12) this.personality = "膽小";
-                else this.personality = "普通";
-
+                this.str = 3 + Math.floor(Math.random() * 15);
+                this.con = 3 + Math.floor(Math.random() * 15);
+                this.siz = 8 + Math.floor(Math.random() * 10);
+                this.dex = 3 + Math.floor(Math.random() * 15);
+                this.personality = (this.str + this.dex > 24) ? "積極" : (this.con < 10 ? "懶惰" : "普通");
                 this.maxHp = Math.ceil((this.con + this.siz) / 2);
-                this.hp = this.maxHp;
-                this.hunger = 80;
-                this.energy = 80;
-                this.isSick = false;
-                
-                this.size = 10 + (this.siz / 2);
-                this.baseSpeed = 0.4 + (this.dex / 20) - (this.siz / 50);
+                this.hp = this.maxHp; this.hunger = 80; this.energy = 80;
+                this.isSick = false; this.age = isBaby ? 0 : 20;
+                this.size = isBaby ? 5 : (10 + this.siz / 2);
+                this.mateCooldown = 0;
                 this.action = "漫步"; this.angle = Math.random()*Math.PI*2;
             }
-
             update() {
                 if(this.hp <= 0) return;
-                
-                // 生理衰減 (人格影響)
-                let energyDrain = (this.personality === "懶惰" ? 0.015 : 0.008);
-                this.hunger -= 0.01;
-                this.energy -= energyDrain;
+                this.hunger -= 0.01; this.energy -= 0.01;
                 if(this.isSick) this.hp -= 0.02;
+                if(this.mateCooldown > 0) this.mateCooldown--;
+                if(this.age < 20) { this.age += 0.001; this.size = 5 + (this.age/20 * (5+this.siz/2)); }
 
-                // 狀態機邏輯
-                if (this.energy < 10) {
-                    this.action = "深度睡眠";
-                    this.energy += 0.1; 
-                } else if (this.energy < 30) {
-                    this.action = "坐下休息";
-                    this.energy += 0.03;
-                    this.move(0.1); // 休息時移動極慢
-                } else if (this.hunger < 50) {
-                    this.action = "採集資源";
-                    this.findResources();
-                } else {
-                    this.action = "漫步";
-                    this.move(this.baseSpeed);
-                }
-
+                if (this.energy < 15) { this.action = "睡眠"; this.energy += 0.08; }
+                else if (this.hunger < 50) { this.action = "採集"; this.findRes(); }
+                else { this.action = "漫步"; this.move(0.5); this.checkSocial(); }
+                
                 if (this.hunger <= 0) this.hp -= 0.04;
-                if (this.energy > 100) this.energy = 100;
             }
-
-            findResources() {
-                let nearby = environment.find(t => 
-                    (t.type === 'forest' || t.type === 'water') && 
-                    Math.abs(t.x - this.x) < 50 && Math.abs(t.y - this.y) < 50
-                );
-                if (nearby) {
-                    let gain = (nearby.type === 'water' ? 0.15 : 0.08) * (this.str / 10);
-                    this.hunger = Math.min(100, this.hunger + gain);
-                    this.action = (nearby.type === 'forest' ? "森林採集" : "湖邊捕魚");
-                } else {
-                    this.move(this.baseSpeed * 1.5); // 飢餓時走得快點
-                }
+            findRes() {
+                let nearby = environment.find(t => (t.type !== 'grass') && Math.abs(t.x-this.x)<40 && Math.abs(t.y-this.y)<40);
+                if(nearby) { this.hunger = Math.min(100, this.hunger + (this.str/100)); this.action = "進食中"; }
+                else { this.move(0.8); }
             }
-
-            move(speed) {
-                if(Math.random() < 0.03) this.angle += (Math.random()-0.5);
-                // 膽小人格轉向更頻繁
-                if(this.personality === "膽小" && Math.random() < 0.05) this.angle += Math.PI/2;
-
-                this.x += Math.cos(this.angle) * speed;
-                this.y += Math.sin(this.angle) * speed;
-                
-                if(this.x < 20 || this.x > canvas.width-20) this.angle = Math.PI - this.angle;
-                if(this.y < 60 || this.y > canvas.height-20) this.angle = -this.angle;
+            move(spd) {
+                if(Math.random()<0.03) this.angle += (Math.random()-0.5);
+                this.x += Math.cos(this.angle) * spd; this.y += Math.sin(this.angle) * spd;
+                if(this.x < 10 || this.x > canvas.width-10) this.angle = Math.PI - this.angle;
+                if(this.y < 50 || this.y > canvas.height-10) this.angle = -this.angle;
             }
-
+            checkSocial() {
+                villagers.forEach(other => {
+                    if(other === this || other.hp <= 0) return;
+                    let dist = Math.hypot(this.x - other.x, this.y - other.y);
+                    if(dist < 30) {
+                        this.action = "社交中";
+                        if(this.gender !== other.gender && this.age >= 18 && other.age >= 18 && this.hunger > 70 && other.hunger > 70 && this.mateCooldown <= 0) {
+                            this.reproduce(other);
+                        }
+                    }
+                });
+            }
+            reproduce(partner) {
+                this.mateCooldown = 5000; partner.mateCooldown = 5000;
+                let baby = new Villager(canvas, true, this.x, this.y);
+                baby.name = "後代-" + Math.floor(Math.random()*99);
+                villagers.push(baby);
+                console.log("新生命誕生！");
+            }
             draw() {
-                if(this.hp <= 0) {
-                    ctx.fillStyle = "#444"; ctx.fillRect(this.x-6, this.y-6, 12, 12);
-                    return;
-                }
-                if(selectedId === this.id) {
-                    ctx.strokeStyle = "#ffd700"; ctx.lineWidth = 3;
-                    ctx.beginPath(); ctx.arc(this.x, this.y, this.size+8, 0, Math.PI*2); ctx.stroke();
-                }
-                
-                // 狀態顯色
-                let color = (this.gender === "男" ? "#4db8ff" : "#ff85a2");
-                if (this.action.includes("睡眠")) color = "#666";
-                if (this.isSick) color = "#77ff77"; // 生病變綠
-
-                ctx.fillStyle = color;
+                if(this.hp <= 0) { ctx.fillStyle="#444"; ctx.fillRect(this.x-5,this.y-5,10,10); return; }
+                if(selectedId === this.id) { ctx.strokeStyle="#ffd700"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(this.x,this.y,this.size+5,0,Math.PI*2); ctx.stroke(); }
+                ctx.fillStyle = (this.action === "睡眠") ? "#666" : (this.gender === "男" ? "#4db8ff" : "#ff85a2");
+                if(this.isSick) ctx.fillStyle = "#7f7";
                 ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
-                
-                // 顯示狀態標籤
-                if(this.isSick) { ctx.fillStyle = "#0f0"; ctx.font = "12px Arial"; ctx.fillText("💀", this.x-8, this.y-this.size-5); }
+                if(this.action === "社交中") { ctx.font="12px Arial"; ctx.fillText("💬", this.x-5, this.y-this.size-5); }
             }
         }
 
@@ -218,66 +183,37 @@
                 else return;
                 ctx.fillRect(t.x, t.y, TILE_SIZE-1, TILE_SIZE-1);
             });
-
-            // 穩定時間推進
-            totalMinutes += 0.1; 
-            let h = Math.floor((totalMinutes/60)%24), m = Math.floor(totalMinutes%60);
-            timeDisplay.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
-            
+            totalMinutes += 0.1;
+            timeDisplay.innerText = `${Math.floor((totalMinutes/60)%24).toString().padStart(2,'0')}:${Math.floor(totalMinutes%60).toString().padStart(2,'0')}`;
             villagers.forEach(v => { v.update(); v.draw(); });
             document.getElementById('pop-count').innerText = villagers.filter(v=>v.hp>0).length;
             document.getElementById('res-count').innerText = Math.floor(globalRes);
-            
             if(selectedId) {
                 let v = villagers.find(v => v.id === selectedId);
-                if(v) updatePanel(v);
+                if(v) {
+                    document.getElementById('v-health').style.width = (v.hp/v.maxHp*100)+'%';
+                    document.getElementById('v-hunger').style.width = v.hunger+'%';
+                    document.getElementById('v-energy').style.width = v.energy+'%';
+                    document.getElementById('v-action').innerText = "動作：" + v.action;
+                    document.getElementById('v-personality').innerText = "("+v.personality+")";
+                    document.getElementById('attr-str').innerText = v.str; document.getElementById('attr-con').innerText = v.con;
+                    document.getElementById('attr-siz').innerText = v.siz; document.getElementById('attr-dex').innerText = v.dex;
+                }
             }
             requestAnimationFrame(loop);
         }
 
-        function updatePanel(v) {
-            document.getElementById('v-health').style.width = (v.hp / v.maxHp * 100) + '%';
-            document.getElementById('v-hunger').style.width = v.hunger + '%';
-            document.getElementById('v-energy').style.width = v.energy + '%';
-            document.getElementById('v-action').innerText = "動作：" + v.action;
-            document.getElementById('v-personality').innerText = "(" + v.personality + ")";
-            document.getElementById('attr-str').innerText = v.str;
-            document.getElementById('attr-con').innerText = v.con;
-            document.getElementById('attr-siz').innerText = v.siz;
-            document.getElementById('attr-dex').innerText = v.dex;
-        }
-
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-            let found = villagers.find(v => Math.hypot(v.x - mx, v.y - my) < 30 && v.hp > 0);
-            if(found) {
-                selectedId = found.id;
-                document.getElementById('v-name').innerText = found.name;
-                statusWindow.style.display = 'block';
-            } else { selectedId = null; statusWindow.style.display = 'none'; }
+            let found = villagers.find(v => Math.hypot(v.x-(e.clientX-rect.left), v.y-(e.clientY-rect.top)) < 30 && v.hp > 0);
+            if(found) { selectedId = found.id; document.getElementById('v-name').innerText = found.name; statusWindow.style.display = 'block'; }
+            else { selectedId = null; statusWindow.style.display = 'none'; }
         });
 
-        window.castMiracle = (t) => {
-            if(t==='food') villagers.forEach(v => v.hunger = Math.min(100, v.hunger+50));
-            if(t==='energy') villagers.forEach(v => v.energy = Math.min(100, v.energy+40));
-        };
-        
-        window.castCalamity = (t) => {
-            if(t==='disease') {
-                villagers.forEach(v => { if(Math.random() < 0.5) v.isSick = true; });
-                alert("疫病蔓延！部分小人染上了惡疾。");
-            }
-            if(t==='famine') {
-                globalRes = Math.max(0, globalRes - 50);
-                alert("大荒來襲！世界資源遭到了削減。");
-            }
-        };
-
-        window.resetWorld = () => { if(confirm("重啟世界？")) { totalMinutes = 480; globalRes = 100; init(); } };
-
-        init();
-        loop();
+        window.castMiracle = (t) => { if(t==='food') villagers.forEach(v=>v.hunger=100); else villagers.forEach(v=>v.energy=100); };
+        window.castCalamity = (t) => { if(t==='disease') villagers.forEach(v=>{if(Math.random()<0.4)v.isSick=true;}); else globalRes-=50; };
+        window.resetWorld = () => { if(confirm("重啟？")) { totalMinutes=480; init(); } };
+        init(); loop();
     };
 </script>
 </body>
