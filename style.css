@@ -55,3 +55,36 @@ canvas { display: block; }
 #notice-board { width: 350px; height: 100%; background: #000; overflow-y: auto; padding: 10px; font-size: 0.7em; color: #eee; line-height: 1.4; box-sizing: border-box; }
 #notice-board div { border-bottom: 1px solid #1a1a1a; padding-bottom: 4px; margin-bottom: 4px; }
 .notice-hero { color: #fff; text-shadow: 0 0 8px #fff, 0 0 15px #daa520; font-weight: bold; }
+
+/* style.css - V9.5 強化村民按鈕視覺 */
+.v-btn { 
+    padding: 6px 12px; 
+    background: #333; 
+    border: 1px solid #555; 
+    border-radius: 4px; 
+    color: #fff; 
+    cursor: pointer; 
+    white-space: nowrap; 
+    font-size: 0.75em; 
+    font-weight: bold; 
+    flex-shrink: 0; 
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 加入彈性動畫 */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3); /* 加入立體陰影 */
+}
+
+/* 性別色條標記 */
+.v-btn.male { border-left: 4px solid #3498db; }
+.v-btn.female { border-left: 4px solid #e84393; }
+
+/* 選中狀態：發光並放大 */
+.v-btn.selected { 
+    border-color: #00ff00; 
+    box-shadow: 0 0 10px #00ff00, inset 0 0 5px #00ff00; 
+    transform: scale(1.1); 
+    z-index: 10;
+}
+
+.v-btn:hover { 
+    background: #444; 
+    border-color: #daa520; 
+}
