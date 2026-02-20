@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V6.4 </title>
+    <title>Underworld V6.7.1 </title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -26,10 +26,22 @@
     
     <h3>神權干預</h3>
     <div class="btn-grid">
-        <button onclick="castMiracle('food')">投放聖餐</button>
-        <button onclick="castMiracle('energy')">賦予精神</button>
-        <button style="color:#ff4d4d;" onclick="castPlague()">天罰災厄</button>
-        <button onclick="resetWorld()" style="color:#aaa;">重啟世界</button>
+        <div class="btn-wrap">
+            <button onclick="castMiracle('food')">投放聖餐</button>
+            <span class="btn-desc">飽食回滿</span>
+        </div>
+        <div class="btn-wrap">
+            <button onclick="castMiracle('energy')">神聖治癒</button>
+            <span class="btn-desc">回血+解毒</span>
+        </div>
+        <div class="btn-wrap">
+            <button style="color:#ff4d4d;" onclick="castPlague()">天罰災厄</button>
+            <span class="btn-desc">隨機毒霧</span>
+        </div>
+        <div class="btn-wrap">
+            <button onclick="resetWorld()" style="color:#aaa;">重啟世界</button>
+            <span class="btn-desc">文明歸零</span>
+        </div>
     </div>
 
     <div id="status-window">
