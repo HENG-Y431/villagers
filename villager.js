@@ -7,7 +7,8 @@ class Villager {
         this.name = `${this.gen}-${this.serial}`;
         this.x = x || cvs.width/2 + (Math.random()-0.5)*200;
         this.y = y || cvs.height/2 + (Math.random()-0.5)*200;
-        this.father = fName; this.mother = mName; this.fatherId = fId; this.motherId = mId;
+        this.father = fName || "無"; this.mother = mName || "無";
+        this.fatherId = fId; this.motherId = mId;
         
         // 修正：強制轉為數字，解決 NaN 問題
         const validAge = Number(startAge);
@@ -29,6 +30,7 @@ class Villager {
         this.maxHp = Math.ceil((this.con + this.siz) / 2);
         this.hp = this.maxHp; this.hunger = 80; this.rels = {}; 
         this.mateCooldown = isBaby ? 0 : 2100; 
+        this.isElder = (gen === 1); // 始祖預設為長老
         this.plagueTimer = 0; this.angle = Math.random()*Math.PI*2;
     }
 
