@@ -17,6 +17,7 @@ class World {
     this.totalMin = 0;
     this.speedSteps = 0;
     this.gracePoints = 200;
+    this.lastAwardYear = 0;
 
     for (let i = 0; i < 12; i++) this.spawn();
     this.chronicle.add("World initialized.");
