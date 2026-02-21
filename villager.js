@@ -233,7 +233,7 @@ if (this.age < 13) {
                 }
             }
         };
-    }
+    )}
     
     reproduce(partner) {
         this.mateCooldown = 5000; partner.mateCooldown = 5000;
