@@ -1,90 +1,27 @@
-/* style.css - V9.3 模組化配套視覺版 */
-body { margin: 0; background: #121212; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; display: flex; color: #e0e0e0; }
-#top-bar { position: absolute; top: 0; left: 0; right: 280px; height: 35px; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 50; border-bottom: 1px solid #daa520; color: #00ff00; font-size: 0.85em; font-weight: bold; }
-#game-container { position: relative; flex-grow: 1; height: 100vh; background: #1a1a1a; }
-canvas { display: block; }
+body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans TC", sans-serif; }
+.wrap { display:flex; height:100vh; }
+canvas { background:#0f172a; flex:1; }
 
-/* 右側面板：支援內部滾動，防止內容爆炸 */
-#god-panel { width: 280px; background: #1a1a1a; border-left: 2px solid #333; padding: 15px; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
-#god-panel::-webkit-scrollbar { width: 5px; }
-#god-panel::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+.side { width:360px; background:#0b1220; color:#e5e7eb; display:flex; flex-direction:column; border-left:1px solid #23314d; }
+.topbar { padding:10px 12px; border-bottom:1px solid #23314d; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.pill { background:#111b33; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid #23314d; }
 
-/* 神恩儀表板 */
-.divine-dashboard { background: linear-gradient(135deg, #2c2c2c, #111); border: 1px solid #daa520; padding: 12px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-.grace-header { font-size: 0.7em; color: #aaa; letter-spacing: 1px; }
-#grace-points { font-size: 1.8em; font-weight: bold; color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.4); margin: 5px 0; }
+.panel { padding:12px; overflow:auto; flex:1; }
+.card { border:1px solid #23314d; border-radius:12px; padding:10px; background:#0c1630; margin-bottom:10px; }
+.row { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+.title { font-weight:800; }
+.muted { color:#9ca3af; font-size:12px; }
+.inline { display:flex; align-items:center; gap:8px; }
 
-/* 按鈕排版 */
-.panel-title { font-size: 0.9em; margin: 0 0 10px 0; color: #eee; border-left: 3px solid #daa520; padding-left: 8px; }
-.btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-.btn-wrap { display: flex; flex-direction: column; align-items: center; }
-.btn-wrap button { width: 100%; padding: 8px 0; font-size: 0.75em; border-radius: 4px; cursor: pointer; background: #333; color: #fff; border: 1px solid #555; transition: 0.2s; }
-.btn-wrap button:hover { background: #444; border-color: #daa520; }
-.btn-desc { font-size: 0.6em; color: #777; margin-top: 4px; transform: scale(0.9); }
+.controls { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 
-/* 村民狀態窗 */
-#status-window { background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 12px; border-radius: 8px; font-size: 0.8em; margin-top: auto; }
-#v-elder-tag { color: #ffd700; font-size: 0.8em; font-weight: bold; margin: 4px 0; }
-#v-personality { color: #00ff00; font-size: 0.75em; margin-bottom: 5px; }
-.lineage-text { font-size: 0.7em; color: #888; border-bottom: 1px solid #333; padding-bottom: 5px; }
+button { cursor:pointer; border:1px solid #23314d; background:#111b33; color:#e5e7eb; border-radius:10px; padding:8px 10px; }
+button:hover { filter:brightness(1.1); }
+input { background:#0b1220; border:1px solid #23314d; color:#e5e7eb; border-radius:10px; padding:8px 10px; width:120px; }
 
-/* 關係與屬性標籤 */
-#v-social-box { max-height: 100px; overflow-y: auto; margin: 8px 0; padding-right: 5px; }
-.rel-tag { font-size: 0.65em; padding: 1px 4px; border-radius: 3px; background: #222; border: 1px solid #444; margin: 0 2px 2px 0; display: inline-block; }
-.type-lover { color: #ff69b4; } .type-friend { color: #3498db; }
+.list { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.chip { border:1px solid #23314d; background:#0b1220; padding:6px 8px; border-radius:999px; font-size:12px; cursor:pointer; }
+.chip.active { background:#1a2a55; }
 
-.attr-grid { display: grid; grid-template-columns: 1fr; gap: 4px; margin: 10px 0; font-size: 0.75em; }
-.attr-label { font-size: 0.85em; margin-left: 5px; }
-.rank-rare { color: #ffd700; font-weight: bold; }
-.rank-good { color: #4caf50; }
-.rank-poor { color: #888; }
-
-/* 狀態條 */
-.status-bar-group { margin-top: 10px; }
-.bar-label { display: flex; justify-content: space-between; font-size: 0.7em; color: #999; }
-.bar { width: 100%; height: 5px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; }
-.bar-fill { height: 100%; transition: width 0.3s; }
-
-/* 底部公告日誌 */
-#admin-footer { position: absolute; bottom: 0; left: 0; right: 280px; height: 110px; background: rgba(15, 15, 15, 0.98); border-top: 2px solid #daa520; display: flex; z-index: 60; }
-#footer-left { flex-grow: 1; display: flex; flex-direction: column; border-right: 1px solid #333; overflow: hidden; }
-#gen-tabs { display: flex; background: #222; padding: 4px 10px; gap: 5px; }
-.tab-btn { padding: 3px 10px; font-size: 0.7em; cursor: pointer; background: #333; color: #aaa; border-radius: 3px 3px 0 0; }
-.tab-btn.active { background: #daa520; color: #000; font-weight: bold; }
-#bottom-bar { display: flex; align-items: center; padding: 10px 15px; gap: 8px; overflow-x: auto; flex-grow: 1; }
-#notice-board { width: 350px; height: 100%; background: #000; overflow-y: auto; padding: 10px; font-size: 0.7em; color: #eee; line-height: 1.4; box-sizing: border-box; }
-#notice-board div { border-bottom: 1px solid #1a1a1a; padding-bottom: 4px; margin-bottom: 4px; }
-.notice-hero { color: #fff; text-shadow: 0 0 8px #fff, 0 0 15px #daa520; font-weight: bold; }
-
-/* style.css - V9.5 強化村民按鈕視覺 */
-.v-btn { 
-    padding: 6px 12px; 
-    background: #333; 
-    border: 1px solid #555; 
-    border-radius: 4px; 
-    color: #fff; 
-    cursor: pointer; 
-    white-space: nowrap; 
-    font-size: 0.75em; 
-    font-weight: bold; 
-    flex-shrink: 0; 
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 加入彈性動畫 */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3); /* 加入立體陰影 */
-}
-
-/* 性別色條標記 */
-.v-btn.male { border-left: 4px solid #3498db; }
-.v-btn.female { border-left: 4px solid #e84393; }
-
-/* 選中狀態：發光並放大 */
-.v-btn.selected { 
-    border-color: #00ff00; 
-    box-shadow: 0 0 10px #00ff00, inset 0 0 5px #00ff00; 
-    transform: scale(1.1); 
-    z-index: 10;
-}
-
-.v-btn:hover { 
-    background: #444; 
-    border-color: #daa520; 
-}
+.log { max-height:220px; overflow:auto; font-size:12px; line-height:1.5; margin-top:8px; }
+.log div { padding:4px 0; border-bottom:1px dashed rgba(35,49,77,.5); }
