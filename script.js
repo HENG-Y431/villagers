@@ -1,535 +1,308 @@
-import {
-  CFG, REL, clamp, dist, formatTime, socialRange, friendUpgradeChanceFloor, cocLabel
-} from "./config.js";
+// script.js
+import { CONFIG, getCoC6Label } from './config.js';
+import Villager from './villager.js';
 
-import {
-  RNG, Villager, Chronicle, isForbiddenPair, resetIds
-} from "./villager.js";
-
-// ---------- World ----------
-class World {
-  constructor(seed = 12345) {
-    this.rng = new RNG(seed);
-    this.chronicle = new Chronicle();
-    this.villagers = [];
-    this.selectedId = null;
-
-    this.totalMin = 0;
-    this.speedSteps = 0;
-    this.gracePoints = 200;
-    this.lastAwardYear = 0;
-
-    for (let i = 0; i < 12; i++) this.spawn();
-    this.chronicle.add("World initialized.");
-  }
-
-  get minutesPerTick() {
-    const t = CFG.SPEED_TABLE_MIN_PER_TICK;
-    return t[Math.max(0, Math.min(t.length - 1, this.speedSteps))];
-  }
-
-  get socialRange() { return socialRange(this.minutesPerTick); }
-  get upgradeFloor() { return friendUpgradeChanceFloor(this.minutesPerTick); }
-
-  spawn(opts = {}) {
-    const v = new Villager(this.rng, opts);
-    this.villagers.push(v);
-    this.chronicle.add(`Spawned ${v.name} (${v.sex}) age ${v.age}.`);
-    return v;
-  }
-
-  getSelected() {
-    return this.villagers.find(x => x.id === this.selectedId && x.alive) ?? null;
-  }
-
-  massMeal() {
-    if (this.gracePoints < 20) return this.chronicle.add("Not enough grace points for Mass Meal.");
-    this.gracePoints -= 20;
-    for (const v of this.villagers) if (v.alive) v.hunger = Math.min(1, v.hunger + 0.25);
-    this.chronicle.add("Mass Meal applied.");
-  }
-
-  singleHeal() {
-    const v = this.getSelected();
-    if (!v) return this.chronicle.add("No villager selected.");
-    if (this.gracePoints < 10) return this.chronicle.add("Not enough grace points for Single Heal.");
-    this.gracePoints -= 10;
-    v.hp = Math.min(1, v.hp + 0.35);
-    this.chronicle.add(`Single Heal on ${v.name}.`);
-  }
-
-  tick() {
-    const dtMin = this.minutesPerTick;
-    this.totalMin += dtMin;
-
-    // 每年加點：Year 變化時計算（倍速也不會重複加）
-const { year } = formatTime(this.totalMin);
-if (year > this.lastAwardYear) {
-  const yearsPassed = year - this.lastAwardYear;
-  this.gracePoints += yearsPassed * CFG.gracePerYear;
-  this.lastAwardYear = year;
-  this.chronicle.add(`Grace +${yearsPassed * CFG.gracePerYear} (yearly).`);
-}
-
-    // 1) 生存
-    for (const v of this.villagers) {
-      if (!v.alive) continue;
-
-      v.hunger = Math.max(0, v.hunger - CFG.hungerDrainPerMin * dtMin);
-      if (v.hunger < 0.10) v.hp = Math.max(0, v.hp - 0.0009 * dtMin);
-
-      if (v.hp <= 0) {
-        v.alive = false;
-        this.chronicle.add(`${v.name} died.`);
-        for (const u of this.villagers) u.relations.delete(v.id);
-      }
-
-    // 優秀小孩加點
-    isExcellentBaby(baby) {
-  const s = baby.stats;
-  const sum = s.STR + s.CON + s.SIZ + s.DEX;
-
-  const brightCount =
-    (s.STR >= CFG.excellentStatThreshold) +
-    (s.CON >= CFG.excellentStatThreshold) +
-    (s.SIZ >= CFG.excellentStatThreshold) +
-    (s.DEX >= CFG.excellentStatThreshold);
-
-  return (sum >= CFG.excellentSumThreshold) || (brightCount >= 2);
-}
+// ---- 全域狀態與 Game Context 建立 ----
+const GameState = {
+    canvas: document.getElementById('worldCanvas'),
+    ctx: document.getElementById('worldCanvas').getContext('2d'),
+    villagers: [],
+    environment: [],
+    totalMinutes: 0,
+    deathCount: 0,
+    divinePoints: 100, // 初始給予 100 點
+    plagueZone: null,
+    genCounters: {},
+    currentYearTracker: 0,
     
-    }
-
-    // 2) 行為切換 + 移動 + 吃
-    for (const v of this.villagers) {
-      if (!v.alive) continue;
-
-      if (v.hunger <= CFG.hungerSeekAt) {
-        v.mode = "seekFood";
-        v.targetFood = this.findNearestFood(v.x, v.y);
-      } else if (v.hunger >= CFG.hungerStopAt && v.mode === "seekFood") {
-        v.mode = "wander";
-        v.targetFood = null;
-      }
-
-      this.updateMovement(v, dtMin);
-
-      if (v.mode === "seekFood" && v.targetFood) {
-        if (dist(v.x, v.y, v.targetFood.x, v.targetFood.y) < 22) {
-          v.hunger = Math.min(1, v.hunger + CFG.eatGain);
+    // 供 Villager 呼叫的方法
+    getSerial: function(gen, gender) {
+        if (!this.genCounters[gen]) this.genCounters[gen] = { m: 1, f: 2 };
+        let s = (gender === "男") ? this.genCounters[gen].m : this.genCounters[gen].f;
+        if (gender === "男") this.genCounters[gen].m += 2; else this.genCounters[gen].f += 2;
+        return s.toString().padStart(2, '0');
+    },
+    addNotice: function(msg, typeClass = "") {
+        const board = document.getElementById('notice-board');
+        let yrs = Math.floor(this.totalMinutes / CONFIG.MINS_IN_YEAR) + 1;
+        let mths = Math.floor((this.totalMinutes / (60 * 24 * 30)) % 12) + 1;
+        let div = document.createElement('div');
+        div.innerHTML = `<span class="notice-time">${yrs}年${mths}月</span> <span class="${typeClass}">${msg}</span>`;
+        board.prepend(div);
+        if (board.childNodes.length > 60) board.removeChild(board.lastChild);
+    },
+    addPoints: function(pts) {
+        this.divinePoints += pts;
+        document.getElementById('divine-points').innerText = this.divinePoints;
+    },
+    usePoints: function(cost) {
+        if (this.divinePoints >= cost) {
+            this.divinePoints -= cost;
+            document.getElementById('divine-points').innerText = this.divinePoints;
+            return true;
         }
-      }
-    }
-
-    // 3) 社交
-    this.updateSocial(dtMin);
-
-    // 4) 懷孕/出生
-    this.updatePregnancyAndBirth(dtMin);
-
-    // 5) 年齡
-    const yearsPerMin = 1 / (CFG.DAYS_PER_YEAR * CFG.MIN_PER_DAY);
-    for (const v of this.villagers) if (v.alive) v.age += dtMin * yearsPerMin;
-  }
-
-  findNearestFood(x, y) {
-    let best = null, bestD = Infinity;
-    for (const n of CFG.foodNodes) {
-      const d = dist(x, y, n.x, n.y);
-      if (d < bestD) { bestD = d; best = n; }
-    }
-    return best;
-  }
-
-  updateMovement(v, dtMin) {
-    let tx = v.x, ty = v.y;
-
-    if (v.mode === "seekFood" && v.targetFood) {
-      tx = v.targetFood.x; ty = v.targetFood.y;
-    } else {
-      if (this.rng.chance(0.02)) {
-        v.vx = this.rng.int(-80, 80) / 80;
-        v.vy = this.rng.int(-80, 80) / 80;
-      }
-      tx = v.x + v.vx * 100;
-      ty = v.y + v.vy * 100;
-    }
-
-    const dex = v.stats.DEX;
-    const speed = clamp(10 + (dex - 10) * 0.6, 6, 14);
-const step = speed;
-
-    const dx = tx - v.x, dy = ty - v.y;
-    const d = Math.hypot(dx, dy) || 1;
-    v.x = clamp(v.x + (dx / d) * step, 20, CFG.W - 20);
-    v.y = clamp(v.y + (dy / d) * step, 20, CFG.H - 20);
-  }
-
-  updateSocial(dtMin) {
-    const alive = this.villagers.filter(v => v.alive);
-    const range = this.socialRange;
-    const nowMin = this.totalMin;
-
-    for (let i = 0; i < alive.length; i++) {
-      const a = alive[i];
-      for (let j = i + 1; j < alive.length; j++) {
-        const b = alive[j];
-        if (isForbiddenPair(a, b)) continue;
-
-        const d = dist(a.x, a.y, b.x, b.y);
-        if (d > range) continue;
-
-        const ra = a.getRelation(b.id);
-        if (nowMin - ra.lastMeetMin < CFG.meetCooldownMin) continue;
-
-        ra.lastMeetMin = nowMin;
-        const rb = b.getRelation(a.id);
-        rb.lastMeetMin = nowMin;
-
-        const proximity = clamp(1 - d / range, 0, 1);
-        const delta = 4 + proximity * 6;
-        ra.score += delta;
-        rb.score += delta;
-
-        this.applyRelationshipFSM(a, b);
-      }
-    }
-  }
-
-  applyRelationshipFSM(a, b) {
-    const ra = a.getRelation(b.id);
-    const rb = b.getRelation(a.id);
-
-    const setBoth = (state) => {
-      a.setRelation(b.id, { state });
-      b.setRelation(a.id, { state });
-    };
-
-    // mentor/student（不會鎖死）
-    const ageGap = Math.abs(a.age - b.age);
-    if ((ra.state === REL.STRANGER || ra.state === REL.FRIEND) && ageGap >= 12 && this.rng.chance(0.12)) {
-      if (a.age > b.age) {
-        a.setRelation(b.id, { state: REL.MENTOR });
-        b.setRelation(a.id, { state: REL.STUDENT });
-      } else {
-        a.setRelation(b.id, { state: REL.STUDENT });
-        b.setRelation(a.id, { state: REL.MENTOR });
-      }
-      this.chronicle.add(`${a.name} & ${b.name} became mentor/student.`);
-      return;
-    }
-
-    if ((ra.state === REL.MENTOR && rb.state === REL.STUDENT) || (ra.state === REL.STUDENT && rb.state === REL.MENTOR)) {
-      if (a.isAdult() && b.isAdult() && ra.score >= CFG.friendScoreThreshold) {
-        setBoth(REL.FRIEND);
-        this.chronicle.add(`${a.name} & ${b.name} shifted to friends (post mentorship).`);
-      }
-      return;
-    }
-
-    // stranger -> friend/lover
-    if (ra.state === REL.STRANGER) {
-      if (ra.score >= CFG.friendScoreThreshold) {
-        if (a.isAdult() && b.isAdult() && ra.score >= CFG.loverScoreThreshold) {
-          const p = this.baseLoverChance(a, b);
-          if (this.rng.chance(p)) {
-            setBoth(REL.LOVER);
-            this.chronicle.add(`${a.name} & ${b.name} became lovers.`);
-            return;
-          }
-        }
-        setBoth(REL.FRIEND);
-        return;
-      }
-    }
-
-    // friend -> lover（重點：永遠保留升格，且有倍速底線）
-    if (ra.state === REL.FRIEND && a.isAdult() && b.isAdult() && ra.score >= CFG.loverScoreThreshold) {
-      const p = Math.max(this.upgradeFloor, this.baseUpgradeChance(a, b));
-      if (this.rng.chance(p)) {
-        setBoth(REL.LOVER);
-        this.chronicle.add(`${a.name} & ${b.name} upgraded to lovers.`);
-      }
-    }
-  }
-
-  baseLoverChance(a, b) {
-    const sameSex = a.sex === b.sex;
-    let p = sameSex ? 0.20 : 0.70;
-
-    const charmA = (a.stats.DEX + a.stats.CON) / 36;
-    const charmB = (b.stats.DEX + b.stats.CON) / 36;
-    p *= clamp(0.75 + 0.5 * ((charmA + charmB) / 2), 0.7, 1.15);
-
-    return clamp(p, 0.05, 0.85);
-  }
-
-  baseUpgradeChance(a, b) {
-    const score = a.getRelation(b.id).score;
-    const s = clamp((score - CFG.loverScoreThreshold) / 60, 0, 1);
-    return 0.004 + s * 0.026; // 0.4% ~ 3%
-  }
-
-  updatePregnancyAndBirth(dtMin) {
-    const alive = this.villagers.filter(v => v.alive);
-
-    // 1) 生產
-    for (const f of alive) {
-      if (f.sex !== "F" || !f.pregnant) continue;
-
-      f.pregnancyDays += dtMin / CFG.MIN_PER_DAY;
-
-      if (f.pregnancyDays >= f.pregnancyTermDays) {
-        if (f.hunger >= CFG.birthHungerMin && f.hp > 0.2) {
-          const dad = alive.find(v => v.id === f.partnerId) ?? null;
-          const baby = this.makeBaby(f, dad);
-          this.villagers.push(baby);
-          this.chronicle.add(`${f.name} gave birth to ${baby.name} (${baby.sex}).`);
-        } else {
-          this.chronicle.add(`${f.name} could not safely deliver (insufficient resources).`);
-        }
-        f.pregnant = false;
-        f.pregnancyDays = 0;
-        f.pregnancyTermDays = 0;
-        f.partnerId = null;
-      }
-    }
-
-    // 2) 觸發懷孕（只要是 Lover 即可；不依賴「陌生→戀人」）
-    for (const f of alive) {
-      if (f.sex !== "F" || f.pregnant) continue;
-      if (f.age < CFG.fertileAgeMin || f.age > CFG.fertileAgeMax) continue;
-      if (f.hunger < CFG.birthHungerMin) continue;
-
-      const lovers = [];
-      for (const [oid, rel] of f.relations.entries()) {
-        if (rel.state !== REL.LOVER) continue;
-        const m = alive.find(v => v.id === oid);
-        if (!m) continue;
-        if (m.age < CFG.fertileAgeMin || m.age > CFG.fertileAgeMax) continue;
-        if (m.hunger < CFG.birthHungerMin) continue;
-        if (isForbiddenPair(f, m)) continue;
-        lovers.push(m);
-      }
-      if (!lovers.length) continue;
-
-      const pPerDay = 0.015;
-      const p = 1 - Math.pow(1 - pPerDay, dtMin / CFG.MIN_PER_DAY);
-      if (this.rng.chance(p)) {
-        const partner = this.rng.pick(lovers);
-        f.pregnant = true;
-        f.pregnancyDays = 0;
-        f.pregnancyTermDays = this.rng.int(CFG.pregnancyMinDays, CFG.pregnancyMaxDays);
-        f.partnerId = partner.id;
-        this.chronicle.add(`${f.name} is pregnant (partner ${partner.name}).`);
-      }
-    }
-  }
-
-  makeBaby(mom, dad) {
-    const r = this.rng;
-    const baby = new Villager(r, {
-      age: 0,
-      hunger: 0.95,
-      x: mom.x + r.int(-10, 10),
-      y: mom.y + r.int(-10, 10),
-      motherId: mom.id,
-      fatherId: dad?.id ?? null,
-    });
-    baby.name = `B${baby.id}`;
-
-    const mutate = () => r.int(-2, 2);
-    const inherit = (k) => {
-      const ma = mom.stats[k];
-      const da = dad ? dad.stats[k] : r.int(3, 18);
-      return clamp(Math.round((ma + da) / 2) + mutate(), 3, 18);
-    };
-    baby.stats.STR = inherit("STR");
-    baby.stats.CON = inherit("CON");
-    baby.stats.SIZ = inherit("SIZ");
-    baby.stats.DEX = inherit("DEX");
-
-    // 親子關係：師生（同時 forbidden 會擋掉戀愛/繁衍）
-    mom.setRelation(baby.id, { state: REL.MENTOR, score: 999, lastMeetMin: this.totalMin });
-    baby.setRelation(mom.id, { state: REL.STUDENT, score: 999, lastMeetMin: this.totalMin });
-
-    return baby;
-  }
-}
-
-// ---------- UI / Render ----------
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
-
-const timePill = document.getElementById("timePill");
-const popPill = document.getElementById("popPill");
-const speedText = document.getElementById("speedText");
-const villagerList = document.getElementById("villagerList");
-const selectedCard = document.getElementById("selectedCard");
-const logEl = document.getElementById("log");
-const logCount = document.getElementById("logCount");
-
-let world = new World(12345);
-
-function renderUI() {
-  const alive = world.villagers.filter(v => v.alive);
-  const t = formatTime(world.totalMin);
-
-  timePill.textContent = `Year ${t.year} • Day ${t.dayInYear}`;
-  popPill.textContent = `Pop ${alive.length}`;
-  speedText.textContent = `${world.minutesPerTick}m/tick`;
-
-  villagerList.innerHTML = "";
-  for (const v of alive.slice(0, 48)) {
-    const chip = document.createElement("div");
-    chip.className = "chip" + (v.id === world.selectedId ? " active" : "");
-    chip.textContent = v.name;
-    chip.onclick = () => world.selectedId = v.id;
-    villagerList.appendChild(chip);
-  }
-
-  const sel = world.getSelected();
-  if (!sel) {
-    selectedCard.style.display = "none";
-  } else {
-    selectedCard.style.display = "block";
-    const rels = [...sel.relations.entries()]
-      .map(([oid, r]) => ({ oid, ...r }))
-      .sort((a,b) => b.score - a.score)
-      .slice(0, 8)
-      .map(r => {
-        const other = world.villagers.find(x => x.id === r.oid);
-        const n = other?.name ?? `#${r.oid}`;
-        return `${n}: ${r.state} (${r.score.toFixed(0)})`;
-      });
-
-    selectedCard.innerHTML = 
-    const sel = world.getSelected();
-if (!sel) {
-  selectedCard.style.display = "none";
-} else {
-  selectedCard.style.display = "block";
-
-  // 由全體資料反查：孩子、戀人、父母
-  const children = world.villagers
-    .filter(v => v.alive && (v.motherId === sel.id || v.fatherId === sel.id))
-    .map(v => v.name);
-
-  const lovers = [...sel.relations.entries()]
-    .filter(([_, r]) => r.state === "Lover")
-    .map(([oid]) => world.villagers.find(v => v.id === oid && v.alive)?.name)
-    .filter(Boolean);
-
-  const mom = sel.motherId ? (world.villagers.find(v => v.id === sel.motherId)?.name ?? "未知") : "無";
-  const dad = sel.fatherId ? (world.villagers.find(v => v.id === sel.fatherId)?.name ?? "未知") : "無";
-
-  const role = children.length ? "部落長老" : "村民";
-
-  const chip = (text) => `<span style="display:inline-block;border:1px solid #23314d;background:#0b1220;padding:6px 8px;border-radius:999px;font-size:12px;margin:2px 4px 2px 0;">${text}</span>`;
-
-  selectedCard.innerHTML = `
-    <div style="font-weight:900;font-size:18px;">${sel.name} <span class="muted" style="float:right;">${sel.age.toFixed(0)}歲</span></div>
-    <div class="muted" style="margin-top:4px;">✨ ${role}</div>
-    <div class="muted" style="margin-top:4px;">父：${dad}　母：${mom}</div>
-
-    <hr style="border:none;border-top:1px solid #23314d;margin:10px 0;">
-
-    <div style="font-weight:800;">❤️ 戀人</div>
-    <div style="margin-top:6px;">${lovers.length ? lovers.map(chip).join("") : `<span class="muted">無</span>`}</div>
-
-    <div style="margin-top:10px;font-weight:800;">👶 家族</div>
-    <div style="margin-top:6px;">${children.length ? children.map(chip).join("") : `<span class="muted">無</span>`}</div>
-
-    <hr style="border:none;border-top:1px solid #23314d;margin:10px 0;">
-
-    <div class="row"><div>STR：${sel.stats.STR}</div><div>CON：${sel.stats.CON}</div></div>
-    <div class="row"><div>SIZ：${sel.stats.SIZ}</div><div>DEX：${sel.stats.DEX}</div></div>
-
-    <div style="margin-top:10px;">
-      <div class="muted">天命 (HP)</div>
-      <div style="height:10px;background:rgba(255,255,255,.15);border-radius:999px;overflow:hidden;">
-        <div style="height:10px;width:${(sel.hp*100).toFixed(0)}%;background:#ff4d4d;"></div>
-      </div>
-      <div class="muted" style="text-align:right;">${(sel.hp*100).toFixed(0)}%</div>
-    </div>
-
-    <div style="margin-top:8px;">
-      <div class="muted">飽食 (Food)</div>
-      <div style="height:10px;background:rgba(255,255,255,.15);border-radius:999px;overflow:hidden;">
-        <div style="height:10px;width:${(sel.hunger*100).toFixed(0)}%;background:#f59e0b;"></div>
-      </div>
-      <div class="muted" style="text-align:right;">${(sel.hunger*100).toFixed(0)}%</div>
-    </div>
-  `;
-}
-
-
-  logEl.innerHTML = world.chronicle.items.map(x => `<div>${x.text}</div>`).join("");
-  logCount.textContent = `${world.chronicle.items.length}`;
-}
-
-function renderWorld() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  for (const n of CFG.foodNodes) {
-    ctx.beginPath();
-    ctx.arc(n.x, n.y, 14, 0, Math.PI*2);
-    ctx.fillStyle = "#1f8a5b";
-    ctx.fill();
-    ctx.fillStyle = "#c7f9cc";
-    ctx.font = "12px system-ui";
-    ctx.fillText(n.type, n.x + 18, n.y + 4);
-  }
-
-  for (const v of world.villagers) {
-    if (!v.alive) continue;
-    const r = 7;
-
-    ctx.beginPath();
-    ctx.arc(v.x, v.y, r, 0, Math.PI*2);
-    ctx.fillStyle = (v.id === world.selectedId) ? "#ffd166" : (v.sex === "F" ? "#9b5de5" : "#00bbf9");
-    ctx.fill();
-
-    ctx.fillStyle = "rgba(255,255,255,0.25)";
-    ctx.fillRect(v.x - 10, v.y - 16, 20, 3);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(v.x - 10, v.y - 16, 20 * clamp(v.hunger, 0, 1), 3);
-  }
-}
-
-function loop() {
-  world.tick();
-  renderWorld();
-  renderUI();
-  requestAnimationFrame(loop);
-}
-
-// 點擊選取（擴大判定）
-canvas.addEventListener("click", (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
-  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-
-  let best = null, bestD = Infinity;
-  for (const v of world.villagers) {
-    if (!v.alive) continue;
-    const d = dist(mx, my, v.x, v.y);
-    if (d < bestD && d <= 18) { best = v; bestD = d; }
-  }
-  if (best) world.selectedId = best.id;
-});
-
-// buttons
-document.getElementById("spawnBtn").onclick = () => world.spawn();
-document.getElementById("mealBtn").onclick = () => world.massMeal();
-document.getElementById("healBtn").onclick = () => world.singleHeal();
-document.getElementById("slowerBtn").onclick = () => { world.speedSteps = Math.max(0, world.speedSteps - 1); };
-document.getElementById("fasterBtn").onclick = () => { world.speedSteps = Math.min(CFG.SPEED_TABLE_MIN_PER_TICK.length - 1, world.speedSteps + 1); };
-
-document.getElementById("resetBtn").onclick = () => {
-  const seed = parseInt(document.getElementById("seedInput").value || "12345", 10);
-  resetIds();
-  world = new World(Number.isFinite(seed) ? seed : 12345);
+        alert(`神權點數不足！需要 ${cost} 點，目前僅有 ${this.divinePoints} 點。`);
+        return false;
+    },
+    isDirectLineage: function(v1, v2, depth = 1) {
+        if (depth > 3 || !v1 || !v2) return false;
+        if (v1.fatherId === v2.id || v1.motherId === v2.id) return true;
+        if (v2.fatherId === v1.id || v2.motherId === v1.id) return true;
+        let v1F = this.villagers.find(v => v.id === v1.fatherId), v1M = this.villagers.find(v => v.id === v1.motherId);
+        if (v1F && this.isDirectLineage(v1F, v2, depth + 1)) return true;
+        if (v1M && this.isDirectLineage(v1M, v2, depth + 1)) return true;
+        return false;
+    },
+    syncUI: () => syncBottomBar()
 };
 
+// UI 狀態
+let selectedId = null;
+let currentTab = 'All';
+let matchmakingTarget = null; // 神聖紅線的預選對象
+let isMatchmakingMode = false;
+
+// ---- 初始化世界 ----
+function initWorld() {
+    GameState.canvas.width = window.innerWidth - 280; 
+    GameState.canvas.height = window.innerHeight;
+    document.getElementById('divine-points').innerText = GameState.divinePoints;
+    
+    const cols = Math.ceil(GameState.canvas.width / CONFIG.TILE_SIZE);
+    const rows = Math.ceil(GameState.canvas.height / CONFIG.TILE_SIZE);
+    for (let x = 0; x < cols; x++) {
+        for (let y = 0; y < rows; y++) {
+            let r = Math.random();
+            GameState.environment.push({ x: x * CONFIG.TILE_SIZE, y: y * CONFIG.TILE_SIZE, type: (r < 0.08 ? 'water' : (r < 0.22 ? 'forest' : 'grass')) });
+        }
+    }
+    
+    // 創造 4 位始祖
+    for (let i = 0; i < 4; i++) {
+        let v = new Villager(GameState, 1, (i < 2 ? "男" : "女"), false, null, null, "無", "無", null, null, 20);
+        v.isElder = true; 
+        GameState.villagers.push(v);
+    }
+    GameState.addNotice("文明起源:始祖長老 降臨。", "notice-elder");
+    syncBottomBar();
+}
+
+// ---- UI 更新邏輯 ----
+function syncBottomBar() {
+    let aliveV = GameState.villagers.filter(v => v.hp > 0);
+    let gens = ['All', ...new Set(aliveV.map(v => v.gen))].sort((a, b) => a - b);
+    const genTabs = document.getElementById('gen-tabs');
+    const bottomBar = document.getElementById('bottom-bar');
+    
+    genTabs.innerHTML = "";
+    gens.forEach(g => {
+        let btn = document.createElement('div');
+        btn.className = `tab-btn ${currentTab == g ? 'active' : ''}`;
+        btn.innerText = g == 'All' ? '全部' : `G${g}`;
+        btn.onclick = () => { currentTab = g; syncBottomBar(); };
+        genTabs.appendChild(btn);
+    });
+    
+    bottomBar.innerHTML = "";
+    aliveV.filter(v => currentTab == 'All' || v.gen == currentTab).forEach(v => {
+        let btn = document.createElement('div');
+        let classes = `v-btn ${v.gender === "男" ? "male" : "female"}`;
+        if (selectedId === v.id) classes += " selected";
+        if (matchmakingTarget && matchmakingTarget.id === v.id) classes += " match-target";
+        btn.className = classes;
+        
+        btn.innerText = (v.isHero ? "⭐" : "") + (v.isElder ? "👑" : "") + v.name;
+        btn.onclick = () => { 
+            selectedId = v.id; 
+            document.getElementById('status-window').style.display = 'block'; 
+            syncBottomBar(); 
+        };
+        bottomBar.appendChild(btn);
+    });
+}
+
+// ---- 神權控制按鈕綁定 (替代舊版 onclick) ----
+document.getElementById('btn-food').addEventListener('click', () => {
+    if (!GameState.usePoints(CONFIG.COSTS.FOOD)) return;
+    GameState.villagers.forEach(v => { if (v.hp > 0) v.hunger = 100; });
+    GameState.addNotice("神蹟: 全體獲得聖餐，飢餓清空。", "notice-elder");
+});
+
+document.getElementById('btn-heal').addEventListener('click', () => {
+    if (!selectedId) return alert("請先點擊選擇一名小人！");
+    if (!GameState.usePoints(CONFIG.COSTS.HEAL)) return;
+    let v = GameState.villagers.find(v => v.id === selectedId && v.hp > 0);
+    if (v) {
+        v.hp = v.maxHp; v.plagueTimer = 0; v.evolveRandomStat(true); syncBottomBar();
+    }
+});
+
+document.getElementById('btn-plague').addEventListener('click', () => {
+    if (GameState.plagueZone) return;
+    if (!GameState.usePoints(CONFIG.COSTS.PLAGUE)) return;
+    GameState.plagueZone = { x: Math.random() * GameState.canvas.width, y: Math.random() * GameState.canvas.height, r: 100 };
+    GameState.addNotice("天罰! 瘟疫在隨機處爆發。", "notice-death");
+    setTimeout(() => GameState.plagueZone = null, 5000);
+});
+
+// ⭐ 神聖紅線 (Divine Matchmaking) 核心邏輯
+document.getElementById('btn-matchmake').addEventListener('click', () => {
+    const statusText = document.getElementById('match-status');
+    
+    // 如果還沒選人
+    if (!selectedId) return alert("【神聖紅線】請先點選一名「成年」村民作為起始對象！");
+    let currentV = GameState.villagers.find(v => v.id === selectedId);
+    if (currentV.age < 18) return alert("【神聖紅線】該村民尚未成年，無法牽線！");
+
+    if (!isMatchmakingMode) {
+        // 第一階段：鎖定目標 A
+        isMatchmakingMode = true;
+        matchmakingTarget = currentV;
+        statusText.innerText = `已鎖定: ${currentV.name}`;
+        statusText.style.color = "#ff69b4";
+        syncBottomBar();
+    } else {
+        // 第二階段：執行牽線
+        if (currentV.id === matchmakingTarget.id) return alert("不能跟自己牽紅線！請選擇另一位異性。");
+        if (currentV.age < 18) return alert("目標對象尚未成年！");
+        if (currentV.gender === matchmakingTarget.gender) return alert("神聖紅線目前僅支援異性繁衍！");
+        
+        
+        // 扣除點數
+        if (!GameState.usePoints(CONFIG.COSTS.MATCHMAKE)) {
+            isMatchmakingMode = false; matchmakingTarget = null; statusText.innerText = "點擊啟動"; syncBottomBar(); return;
+        }
+
+        // 強制建立滿分戀人關係
+        currentV.rels[matchmakingTarget.id] = { score: 100, type: '戀人', name: matchmakingTarget.name };
+        matchmakingTarget.rels[currentV.id] = { score: 100, type: '戀人', name: currentV.name };
+        
+        GameState.addNotice(`💖 神聖紅線：${currentV.name} 與 ${matchmakingTarget.name} 被命運強制綁定！`, "notice-hero");
+        
+        // 強制繁衍
+        currentV.reproduce(matchmakingTarget);
+
+        // 解除牽線模式
+        isMatchmakingMode = false;
+        matchmakingTarget = null;
+        statusText.innerText = "點擊啟動";
+        statusText.style.color = "#888";
+        syncBottomBar();
+    }
+});
+
+
+// ---- 主迴圈 ----
+function loop() {
+    const ctx = GameState.ctx;
+    const canvas = GameState.canvas;
+    
+    ctx.fillStyle = "#1e301e"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    GameState.environment.forEach(t => {
+        ctx.fillStyle = (t.type === 'water' ? "#2a5a7a" : (t.type === 'forest' ? "#145a32" : "#2d4a2d"));
+        ctx.fillRect(t.x, t.y, CONFIG.TILE_SIZE - 1, CONFIG.TILE_SIZE - 1);
+    });
+    
+    if (GameState.plagueZone) {
+        let p = Math.sin(Date.now() / 200) * 10;
+        ctx.fillStyle = "rgba(0, 255, 0, 0.25)"; ctx.beginPath();
+        ctx.arc(GameState.plagueZone.x, GameState.plagueZone.y, 100 + p, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "rgba(0, 255, 0, 0.6)"; ctx.lineWidth = 2; ctx.beginPath();
+        ctx.arc(GameState.plagueZone.x, GameState.plagueZone.y, 105 + p, 0, Math.PI * 2); ctx.stroke();
+    }
+    
+    GameState.totalMinutes += CONFIG.SPEED_MULTIPLIER;
+    
+    // 計算時間與點數發放邏輯
+    let calculatedYear = Math.floor(GameState.totalMinutes / CONFIG.MINS_IN_YEAR);
+    if (calculatedYear > GameState.currentYearTracker) {
+        GameState.currentYearTracker = calculatedYear;
+        GameState.addPoints(CONFIG.POINTS.YEAR_PASSED); // 每年 +5 點
+        GameState.addNotice(`文明邁入第 ${calculatedYear + 1} 年，神權點數 +5！`, "notice-elder");
+    }
+
+    let yrs = calculatedYear + 1;
+    let mths = Math.floor((GameState.totalMinutes / (60 * 24 * 30)) % 12) + 1;
+    let hrs = Math.floor((GameState.totalMinutes / 60) % 24), mins = Math.floor(GameState.totalMinutes % 60);
+    document.getElementById('world-time').innerText = `第${yrs}年${mths}月 | ${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    
+    let aliveV = GameState.villagers.filter(v => v.hp > 0);
+    document.getElementById('pop-stats').innerText = `人口:${aliveV.length} (男:${aliveV.filter(v => v.gender == "男").length} | 女:${aliveV.filter(v => v.gender == "女").length})`;
+    document.getElementById('death-stats').innerText = `累積死亡:${GameState.deathCount}`;
+    
+    // 繪製村民 (傳入 selectedId 與 matchmakingTargetId 以繪製不同光環)
+    GameState.villagers.forEach(v => { 
+        v.update(); 
+        v.draw(ctx, (selectedId === v.id), (matchmakingTarget && matchmakingTarget.id === v.id)); 
+    });
+    
+    // 更新左下角面板細節
+    if (selectedId) {
+        let v = GameState.villagers.find(v => v.id === selectedId);
+        if (v && v.hp > 0) {
+            document.getElementById('v-name').innerHTML = (v.isHero ? "<span style='color: #fff; text-shadow: 0 0 5px #daa520;'>[神選]</span> " : "") + v.name;
+            document.getElementById('v-age').innerText = Math.floor(v.age) + "歲";
+            document.getElementById('v-elder-tag').style.display = v.isElder ? 'block' : 'none';
+            document.getElementById('v-personality').innerText = "性格:" + v.personality;
+            document.getElementById('v-father').innerText = v.father;
+            document.getElementById('v-mother').innerText = v.mother;
+            
+            let s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
+            document.getElementById('attr-str').innerHTML = `STR: ${v.str} <span class="attr-label ${s.cls}">(${s.txt})</span>`;
+            document.getElementById('attr-con').innerHTML = `CON: ${v.con} <span class="attr-label ${c.cls}">(${c.txt})</span>`;
+            document.getElementById('attr-siz').innerHTML = `SIZ: ${v.siz} <span class="attr-label ${z.cls}">(${z.txt})</span>`;
+            document.getElementById('attr-dex').innerHTML = `DEX: ${v.dex} <span class="attr-label ${d.cls}">(${d.txt})</span>`;
+            
+            let hpP = Math.floor(v.hp / v.maxHp * 100), fdP = Math.floor(v.hunger);
+            document.getElementById('v-health').parentElement.style.background = v.plagueTimer > 0 ? "#4a148c" : "#222";
+            document.getElementById('v-health').style.width = hpP + '%';
+            document.getElementById('v-hunger').style.width = fdP + '%';
+            document.getElementById('hp-txt').innerText = (v.plagueTimer > 0 ? "受感染 " : "") + hpP + '%';
+            document.getElementById('fd-txt').innerText = fdP + '%';
+            
+            let g = { '戀人': [], '家族': [], '朋友': [], '師生': [] };
+            Object.values(v.rels).forEach(r => {
+                if (r.type === '戀人') g['戀人'].push(r.name);
+                else if (['父親', '母親', '子女'].includes(r.type)) g['家族'].push(`${r.type}:${r.name}`);
+                else if (r.type === '朋友') g['朋友'].push(r.name);
+                else if (r.type === '師生') g['師生'].push(r.name);
+            });
+            
+            let h = "";
+            for (let [t, ns] of Object.entries(g)) {
+                if (ns.length > 0) {
+                    let cl = t.includes('戀人') ? 'type-lover' : (t.includes('家族') ? 'type-family' : (t.includes('朋友') ? 'type-friend' : 'type-mentor'));
+                    h += `<div class="rel-group"><div class="rel-header ${cl}">${t}</div><div class="rel-tags">`;
+                    ns.forEach(n => h += `<span class="rel-tag">${n}</span>`);
+                    h += '</div></div>';
+                }
+            }
+            document.getElementById('v-social-box').innerHTML = h || '<div style="color:#666; font-size:0.75em; padding: 10px;">暫無關係</div>';
+        } else {
+            selectedId = null; 
+            document.getElementById('status-window').style.display = 'none'; 
+            syncBottomBar();
+        }
+    }
+    
+    requestAnimationFrame(loop);
+}
+
+// 綁定畫布點擊
+GameState.canvas.addEventListener('mousedown', (e) => {
+    const rect = GameState.canvas.getBoundingClientRect();
+    let found = GameState.villagers.find(v => Math.hypot(v.x - (e.clientX - rect.left), v.y - (e.clientY - rect.top)) < 30 && v.hp > 0);
+    if (found) {
+        selectedId = found.id;
+        document.getElementById('status-window').style.display = 'block';
+    } else {
+        selectedId = null;
+        document.getElementById('status-window').style.display = 'none';
+    }
+    syncBottomBar();
+});
+
+// 啟動遊戲
+initWorld();
 loop();
