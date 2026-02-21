@@ -1,83 +1,30 @@
-export const REL = Object.freeze({
-  STRANGER: "Stranger",
-  FRIEND: "Friend",
-  LOVER: "Lover",
-  MENTOR: "Mentor",
-  STUDENT: "Student",
-});
+// config.js
+export const CONFIG = {
+    TILE_SIZE: 45,
+    SOCIAL_RANGE: 130, // 社交判定半徑
+    MINS_IN_YEAR: 60 * 24 * 30 * 12, // 一年的遊戲內分鐘數
+    SPEED_MULTIPLIER: 250, // 每次迴圈推進的時間量 (時空跳躍)
+    
+    // 神權點數系統設定
+    POINTS: {
+        YEAR_PASSED: 5,     // 每年自然增加
+        BIRTH_NORMAL: 10,   // 普通嬰兒誕生
+        BIRTH_HERO: 20,     // 神選之才誕生
+    },
+    
+    // 神權干預技能消耗
+    COSTS: {
+        FOOD: 100,           // 投放聖餐
+        HEAL: 50,           // 神聖治癒
+        PLAGUE: 10,         // 天罰災厄
+        MATCHMAKE: 200       // 神聖紅線
+    }
+};
 
-export const CFG = Object.freeze({
-  W: 1200, H: 800,
-
-  MIN_PER_DAY: 24 * 60,
-  DAYS_PER_YEAR: 360,
-
-MAP_COLS: 40,
-MAP_ROWS: 24,
-TILE: 32,
-  
- gracePerYear: 5,
- gracePerBirth: 10,
- gracePerExcellentBirth: 20,
- excellentStatThreshold: 16,   // 單項 >=16 視為亮眼
-excellentSumThreshold: 60,    // 或總和 >=60 視為優秀
-
-  // 倍速檔位（每 tick 增加多少「世界分鐘」）
-  SPEED_TABLE_MIN_PER_TICK: [2, 5, 10, 20, 40, 80, 120, 200],
-
-  hungerDrainPerMin: 0.00055,
-  eatGain: 0.20,
-  hungerSeekAt: 0.70,
-  hungerStopAt: 0.95,
-
-  baseSocialRange: 110,
-  meetCooldownMin: 60,
-
-  friendScoreThreshold: 20,
-  loverScoreThreshold: 35,
-
-  // Friend->Lover 互動觸發的最低保護機率
-  minUpgradeChance: 0.008,
-
-  fertileAgeMin: 18,
-  fertileAgeMax: 45,
-  pregnancyMinDays: 90,
-  pregnancyMaxDays: 140,
-  birthHungerMin: 0.45,
-
-  foodNodes: [
-    { x: 200, y: 180, type: "Forest" },
-    { x: 980, y: 240, type: "Lake" },
-    { x: 660, y: 640, type: "Wild" },
-  ],
-});
-
-export function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-export function dist(x1, y1, x2, y2) { return Math.hypot(x1 - x2, y1 - y2); }
-
-export function formatTime(totalMin) {
-  const day = Math.floor(totalMin / CFG.MIN_PER_DAY);
-  const year = Math.floor(day / CFG.DAYS_PER_YEAR);
-  const dayInYear = day % CFG.DAYS_PER_YEAR;
-  return { year, dayInYear };
-}
-
-// 倍速越高：社交距離底線拉高（避免擦身而過）
-export function socialRange(minutesPerTick) {
-  const mult = Math.max(1, minutesPerTick / 2);
-  return Math.max(CFG.baseSocialRange, CFG.baseSocialRange + 18 * Math.log2(mult));
-}
-
-// 倍速越高：Friend->Lover 升格底線拉高（避免世代鎖死）
-export function friendUpgradeChanceFloor(minutesPerTick) {
-  const mult = Math.max(1, minutesPerTick / 2);
-  return Math.min(0.06, CFG.minUpgradeChance * Math.sqrt(mult));
-}
-
-export function cocLabel(v) {
-  if (v <= 5) return "極低";
-  if (v <= 8) return "低";
-  if (v <= 12) return "一般";
-  if (v <= 15) return "高";
-  return "極高";
+export function getCoC6Label(val) {
+    if (val <= 5) return { txt: "缺陷", cls: "rank-poor" };
+    if (val <= 7) return { txt: "稍弱", cls: "rank-poor" };
+    if (val <= 12) return { txt: "正常", cls: "" };
+    if (val <= 15) return { txt: "優秀", cls: "rank-good" };
+    return { txt: "超群", cls: "rank-rare" };
 }
