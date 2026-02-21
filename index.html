@@ -32,14 +32,19 @@
     </div>
     <div id="status-window">
         <strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong>
-        <span id="v-age" style="color: #4caf50;">0 歲</span>
-        <div id="v-personality" style="color: #00ff00; font-size: 0.75em; margin: 5px 0;">載入中</div>
+       <span id="v-age" style="color: #4caf50;">0 歲</span>
+        </div>
+        <div id="v-elder-tag" style="color: #ffd700; font-size: 0.8em; font-weight: bold; margin-top: 5px;">✨ 部落長老 ✨</div>
+        <div id="v-personality" style="color: #00ff00; font-size: 0.75em; margin-bottom: 5px;">性格：載入中</div>
         <div class="lineage-text">父：<span id="v-father"></span> | 母：<span id="v-mother"></span></div>
         <div id="v-social-box"></div>
         <div class="attr-grid"><div id="attr-str"></div><div id="attr-con"></div><div id="attr-siz"></div><div id="attr-dex"></div></div>
+        
         <div class="status-bar-group">
-            天命 (health)<div class="bar"><div id="v-health" class="bar-fill" style="background: #e74c3c;"></div></div>
-            飽食 (food)<div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div>
+            <div class="bar-label"><span>天命 (HP)</span><span id="hp-txt">100%</span></div>
+            <div class="bar"><div id="v-health" class="bar-fill" style="background: #e74c3c;"></div></div>
+            <div class="bar-label" style="margin-top:6px;"><span>飽食 (Food)</span><span id="fd-txt">100%</span></div>
+            <div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div>
         </div>
     </div>
     <button onclick="resetWorld()" style="width:100%; margin-top:15px; font-size:0.7em; background:none; border:1px solid #333; color:#555; cursor:pointer;">歸零重啟</button>
