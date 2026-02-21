@@ -76,14 +76,20 @@ window.onload = function() {
                 document.getElementById('v-name').innerText = v.name;
                 document.getElementById('v-age').innerText = Math.floor(v.age)+"歲";
                 document.getElementById('v-personality').innerText = "性格："+v.personality;
+                document.getElementById('v-elder-tag').style.display = v.isElder ? "block" : "none";
                 document.getElementById('v-father').innerText = v.father; document.getElementById('v-mother').innerText = v.mother;
+                
                 let s = getCoC6Label(v.str), c = getCoC6Label(v.con), z = getCoC6Label(v.siz), d = getCoC6Label(v.dex);
                 document.getElementById('attr-str').innerHTML = `力量 (STR): ${v.str} (${s.txt})`;
                 document.getElementById('attr-con').innerHTML = `體質 (CON): ${v.con} (${c.txt})`;
                 document.getElementById('attr-siz').innerHTML = `體型 (SIZ): ${v.siz} (${z.txt})`;
                 document.getElementById('attr-dex').innerHTML = `敏捷 (DEX): ${v.dex} (${d.txt})`;
-                document.getElementById('v-health').style.width = (v.hp/v.maxHp*100)+'%';
-                document.getElementById('v-hunger').style.width = Math.max(0, v.hunger)+'%';
+
+                let hpP = Math.floor(v.hp/v.maxHp*100), fdP = Math.max(0, Math.floor(v.hunger));
+                document.getElementById('v-health').style.width = hpP+'%'; 
+                document.getElementById('hp-txt').innerText = hpP + '%';
+                document.getElementById('v-hunger').style.width = fdP+'%';
+                document.getElementById('fd-txt').innerText = fdP + '%';
                 
                 let fam = [], lov = [];
                 Object.values(v.rels).forEach(r => { if(r.type === '家族') fam.push(r.name); else if(r.type === '戀人') lov.push(r.name); });
