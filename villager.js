@@ -208,6 +208,7 @@ if (this.age < 13) {
         this.game.addNotice(`⭐ 羈絆：${this.name} 與 ${o.name} 結為了一生的唯一摯友！`, "notice-hero");
     }
 }           
+}           
          
     // 設定雙方的年齡都必須在 18 到 39 歲之間
        if (this.age >= 18 && this.age <= 39 && o.age >= 18 && o.age <= 39) {
@@ -232,8 +233,8 @@ if (this.age < 13) {
                     this.reproduce(o);
                 }
             }
-        };
-    })
+        });
+    }
     
     reproduce(partner) {
         this.mateCooldown = 5000; partner.mateCooldown = 5000;
