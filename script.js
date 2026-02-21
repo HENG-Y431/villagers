@@ -266,10 +266,10 @@ function loop() {
             document.getElementById('fd-txt').innerText = fdP + '%';
             
             // 社交關係
-            let g = { '戀人': [], '摯友': [], '家族': [], '朋友': [], '師生': [] };
+            let g = { '摯友': [], '戀人': [], '家族': [], '朋友': [], '師生': [] };
             Object.values(v.rels).forEach(r => {
-                if (r.type === '戀人') g['戀人'].push(r.name);
-                else if (r.type === '摯友') g['摯友'].push(r.name); 
+                if (r.type === '摯友') g['摯友'].push(r.name);
+                else if (r.type === '戀人') g['戀人'].push(r.name);
                 else if (['父親', '母親', '子女'].includes(r.type)) g['家族'].push(`${r.type}:${r.name}`);
                 else if (r.type === '朋友') g['朋友'].push(r.name);
                 else if (r.type === '師生') g['師生'].push(r.name);
