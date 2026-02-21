@@ -277,7 +277,7 @@ evolveRandomStat(isDivine = false) {
         
     // 0.05% 機率生出雙性 (0.0005)，否則男女各半
         let roll = Math.random();
-        let babyGender = roll < 0.2 ? "雙性" : (roll < 0.50025 ? "男" : "女");
+        let babyGender = roll < 0.05 ? "雙性" : (roll < 0.50025 ? "男" : "女");
 
     // 解決雙性無法判定父母欄位的問題 (讓雙性固定填入父親欄)
         let fName = (this.gender === "男" || this.gender === "雙性") ? this.name : partner.name;
