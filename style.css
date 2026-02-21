@@ -18,7 +18,7 @@ canvas { display: block; }
 .v-btn.selected { border-color: #00ff00; box-shadow: 0 0 8px #00ff00; transform: scale(1.05); }
 .v-btn.match-target { border-color: #ff69b4; box-shadow: 0 0 10px #ff69b4; animation: pulse 1s infinite; }
 
-// 性別
+/* 性別按鈕顏色 */
 .v-btn.male { border-left: 3px solid #3498db; }
 .v-btn.female { border-left: 3px solid #e84393; }
 .v-btn.intersex { border-left: 3px solid #9b59b6; }
