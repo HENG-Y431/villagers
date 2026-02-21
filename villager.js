@@ -29,11 +29,30 @@ export default class Villager {
             let mutation = Math.floor(Math.random() * 5) - 2;
             return Math.max(3, Math.min(18, Math.floor(base + mutation)));
         };
-        
+
+        // 基本擲骰邏輯
         this.str = rollStat(p1?.str, p2?.str);
         this.con = rollStat(p1?.con, p2?.con);
         this.siz = rollStat(p1?.siz, p2?.siz);
         this.dex = rollStat(p1?.dex, p2?.dex);
+
+        // 性別基礎屬性微調 (最高不超過 18)
+        if (this.gender === "男") {
+            // 男性：50% 機率 力量+1，50% 機率 體型+1
+            if (Math.random() < 0.5) {
+                this.str = Math.min(18, this.str + 1);
+            } else {
+                this.siz = Math.min(18, this.siz + 1);
+            }
+        } else if (this.gender === "女") {
+            // 女性：50% 機率 體質+1，50% 機率 敏捷+1
+            if (Math.random() < 0.5) {
+                this.con = Math.min(18, this.con + 1);
+            } else {
+                this.dex = Math.min(18, this.dex + 1);
+            }
+        }
+
         
         this.isHero = (this.str >= 16 || this.con >= 16 || this.siz >= 16 || this.dex >= 16);
         this.personality = (this.str + this.dex > 25) ? "積極" : (this.con < 10 ? "懶惰" : "普通");
