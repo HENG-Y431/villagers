@@ -163,10 +163,11 @@ if (this.age < 13) {
                 if (!o.rels[this.id]) o.rels[this.id] = { score: 0, type: '陌生人', name: this.name };
                 let r = this.rels[o.id];
                 r.score += 0.8; o.rels[this.id].score += 0.8;
-                
-                if (this.age >= 18 && o.age >= 18) {
+
+                // 設定雙方的年齡都必須在 18 到 39 歲之間
+                if (this.age >= 18 && this.age <= 39 && o.age >= 18 && o.age <= 39) {
                     if (r.type === '陌生人' || r.type === '朋友' || r.type === '師生') {
-                        let chance = (r.type === '朋友') ? 0.01 : 0.85;
+                        let chance = (r.type === '朋友') ? 0.2 : 0.85;
                         if (Math.random() < chance && r.score > 10) {
                             if (this.gender !== o.gender || Math.random() < 0.2) {
                                 r.type = '戀人'; o.rels[this.id].type = '戀人';
