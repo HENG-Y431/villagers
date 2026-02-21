@@ -45,6 +45,7 @@ canvas { display: block; }
 .rel-header { font-size: 0.7em; font-weight: bold; margin-bottom: 2px; }
 .rel-tag { font-size: 0.7em; padding: 1px 4px; border-radius: 3px; background: #222; border: 1px solid #444; margin-right: 3px; display: inline-block; }
 .type-lover { color: #ff69b4; } .type-family { color: #999; } .type-friend { color: #3498db; } .type-mentor { color: #9b59b6; }
+.type-partner { color: #ff9800; text-shadow: 0 0 5px rgba(255, 152, 0, 0.5); }
 .attr-grid { display: grid; grid-template-columns: 1fr; gap: 5px; font-size: 0.75em; color: #aaa; margin-top: 5px; }
 .rank-rare { color: #ffd700; font-weight: bold; } .rank-good { color: #4caf50; } .rank-poor { color: #888; }
 .bar { width: 100%; height: 5px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 2px; }
