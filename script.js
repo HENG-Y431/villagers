@@ -17,13 +17,26 @@ const GameState = {
     
     // 供 Villager 呼叫的方法
     getSerial: function(gen, gender) {
-        if (!this.genCounters[gen]) this.genCounters[gen] = { m: 1, f: 2, x: 3 };
-        let s = (gender === "男") ? this.genCounters[gen].m : ((gender === "女") ? this.genCounters[gen].f : this.genCounters[gen].x);
+        // 初始化該代數的計數器：男從1(奇數), 女從2(偶數), 雙性從1(獨立計算)
+        if (!this.genCounters[gen]) { 
+            this.genCounters[gen] = { m: 1, f: 2, x: 1 };
+        }
         
-        if (gender === "男") this.genCounters[gen].m += 3; 
-        else if (gender === "女") this.genCounters[gen].f += 3;
-        else this.genCounters[gen].x += 3;
-        return s.toString().padStart(2, '0');
+        let s;
+        if (gender === "男") {
+            // 男生拿奇數，並 +2
+            s = this.genCounters[gen].m.toString().padStart(2, '0');
+            this.genCounters[gen].m += 2; 
+        } else if (gender === "女") {
+            // 女生拿偶數，並 +2
+            s = this.genCounters[gen].f.toString().padStart(2, '0');
+            this.genCounters[gen].f += 2; 
+        } else {
+            // 雙性拿專屬的 "X" 前綴，按照 1, 2, 3... 順序排
+            s = "X" + this.genCounters[gen].x.toString().padStart(2, '0');
+            this.genCounters[gen].x += 1; 
+        }
+        return s;
     },
     
     addNotice: function(msg, typeClass = "") {
