@@ -50,8 +50,9 @@ export default class Villager {
                 this.con = Math.min(18, this.con + 1);
             } else {
                 this.dex = Math.min(18, this.dex + 1);
+              }  
             } else if (this.gender === "雙性") {
-            // 【雙性天生體弱，大幅扣減體質(血量)與力量(採集)，最低不低於3
+            // 雙性天生體弱，大幅扣減體質(血量)與力量(採集)，最低不低於3
             this.con = Math.max(3, this.con - 3);
             this.str = Math.max(3, this.str - 2);           
         }
