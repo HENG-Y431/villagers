@@ -112,10 +112,14 @@ function addNotice(msg, cls = "") {
     board.prepend(div);
 }
 function updateGrace(amount) { gracePoints += amount; }
+
+// --- 修正：依照最新指示校準標籤範圍 ---
 function getCoC6Label(v) { 
-    if(v>=17) return {txt:"稀有",cls:"rank-rare"}; 
-    if(v>=14) return {txt:"超群",cls:"rank-good"}; 
-    return {txt:"正常",cls:""}; 
+    if(v <= 5) return {txt:"缺陷",cls:"rank-poor"}; 
+    if(v <= 7) return {txt:"稍弱",cls:"rank-poor"}; 
+    if(v <= 13) return {txt:"正常人",cls:""}; 
+    if(v <= 15) return {txt:"優秀",cls:"rank-good"}; 
+    return {txt:"超群",cls:"rank-rare"}; 
 }
 
 // 修正：重新補回分頁邏輯
