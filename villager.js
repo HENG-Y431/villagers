@@ -89,15 +89,36 @@ export default class Villager {
         } else if (this.hunger < 70 || (this.action === "進食" && this.hunger < 95)) {
             this.action = "進食"; this.move(0.75); this.findRes();
         } else {
-            if (this.age < 13) {
-                let p = this.game.villagers.find(v => (v.id === this.motherId || v.id === this.fatherId) && v.hp > 0);
-                if (p) {
-                    this.action = "跟隨"; this.angle = Math.atan2(p.y - this.y, p.x - this.x); this.move(0.45);
-                    if (Math.hypot(this.x - p.x, this.y - p.y) < 20) this.hunger = Math.min(100, this.hunger + 0.015);
-                } else this.move(0.3);
-            } else {
-                this.action = "探索"; this.move(this.personality === "積極" ? 0.6 : 0.4);
-            }
+
+            
+    // 如果小人未滿 13 歲（幼年期）
+if (this.age < 13) {
+    
+    // 【尋親邏輯】：優先找媽媽，媽媽如果不在（死亡），才找爸爸
+    let p = this.game.villagers.find(v => v.id === this.motherId && v.hp > 0) || 
+            this.game.villagers.find(v => v.id === this.fatherId && v.hp > 0);
+    
+    // 如果有找到父母其中一方
+    if (p) {
+        this.action = "跟隨"; 
+        
+        // 計算父母所在的角度，並朝著父母移動
+        this.angle = Math.atan2(p.y - this.y, p.x - this.x); 
+        this.move(0.45); // 移動速度較慢 (0.45)
+        
+        // 【餵哺機制】：如果距離父母夠近（小於 20 像素），飽食度會自動慢慢回升
+        if (Math.hypot(this.x - p.x, this.y - p.y) < 20) {
+            this.hunger = Math.min(100, this.hunger + 0.015);
+        }
+    } else {
+        // 如果父母雙亡，變回孤兒漫無目的移動
+        this.move(0.3);
+    }
+} else {
+    // 滿 13 歲以上（成年/青少年），開始獨立探索
+    this.action = "探索"; 
+    this.move(this.personality === "積極" ? 0.6 : 0.4);
+}
         }
         
         if (this.hunger <= 0) this.hp -= 0.04;
