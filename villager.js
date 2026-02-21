@@ -112,9 +112,7 @@ export default class Villager {
         } else if (this.hunger < 70 || (this.action === "進食" && this.hunger < 95)) {
             this.action = "進食"; this.move(0.75); this.findRes();
         } else {
-
-            
-    // 小人的獨立年齡（女性 16 歲，男性 13 歲）
+            // 小人的獨立年齡（女性 16 歲，男性 13 歲）
             let independentAge = (this.gender === "女") ? 16 : 13;
             
             // 統一判斷：只要還沒到獨立年齡，就去跟隨父母
@@ -131,51 +129,39 @@ export default class Villager {
                     
                     // 【餵哺機制】：如果距離父母夠近，飽食度會自動回升
                     if (Math.hypot(this.x - p.x, this.y - p.y) < 20) {
-                    // 如果是雙性，媽媽有60%的機率拒絕餵食 (只有 40% 機率成功吃到飯)
+                        // 如果是雙性，媽媽有60%的機率拒絕餵食 (只有 40% 機率成功吃到飯)
                         let feedChance = (this.gender === "雙性" && p.id === this.motherId) ? 0.4 : 1.0;
                         if (Math.random() < feedChance) {
-                        
-                        this.hunger = Math.min(100, this.hunger + 0.015);
-                    }
+                            this.hunger = Math.min(100, this.hunger + 0.015);
+                        }
+                    } 
                 } else {
                     // 如果父母雙亡，變回孤兒漫無目的移動
                     this.move(0.3);
                 }
-                
             } else {
                 // 滿獨立年齡後，開始自己探索世界
                 this.action = "探索"; 
                 this.move(this.personality === "積極" ? 0.6 : 0.4);
+            }
+        }
 
-         // 嚴重飢餓扣血
+        // 嚴重飢餓扣血 (現在它們成功獨立出來了，不會被包在上面的邏輯裡了)
         if (this.hunger <= 0) this.hp -= 0.04;
 
-        // 時間流逝、老化與冷卻時間 (🌟 這個剛剛被刪掉了，已經幫您補回)
+        // 時間流逝、老化與冷卻時間
         if (typeof CONFIG !== 'undefined' && CONFIG.MINS_IN_YEAR) {
             this.age += 1 / CONFIG.MINS_IN_YEAR;
         }
         if (this.mateCooldown > 0) this.mateCooldown--;
         if (this.age > 85 && Math.random() < 0.001) this.hp = 0;
                     
-       // 死亡判定 
+        // 死亡判定 
         if (this.hp <= 0) {
             this.hp = 0; this.game.deathCount++;
             this.game.addNotice(`${this.isElder ? "長老" : "村民"} ${this.name} 離世。`, "notice-death");
             if (this.isElder) this.passElderTitle();
             this.game.syncUI();
-        }
-    }
-    
-    evolveRandomStat(isDivine = false) {
-        const stats = ['str', 'con', 'siz', 'dex'];
-        let s = stats[Math.floor(Math.random() * stats.length)];
-        if (this[s] < 18) {
-            this[s] += 1;
-            if (s === 'con' || s === 'siz') this.maxHp = Math.ceil((this.con + this.siz) / 2);
-            if (this[s] >= 16) this.isHero = true;
-            const trans = { str: '力量', con: '體質', siz: '體型', dex: '敏捷' };
-            if (isDivine) this.game.addNotice(`神蹟: ${this.name} 的 ${trans[s]} 提升!`, "notice-elder");
-            else this.game.addNotice(`成長: ${this.name} 提升了 ${trans[s]}。`, "");
         }
     }
     
