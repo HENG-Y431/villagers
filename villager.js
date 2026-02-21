@@ -164,6 +164,19 @@ export default class Villager {
             this.game.syncUI();
         }
     }
+
+evolveRandomStat(isDivine = false) {
+        const stats = ['str', 'con', 'siz', 'dex'];
+        let s = stats[Math.floor(Math.random() * stats.length)];
+        if (this[s] < 18) {
+            this[s] += 1;
+            if (s === 'con' || s === 'siz') this.maxHp = Math.ceil((this.con + this.siz) / 2);
+            if (this[s] >= 16) this.isHero = true;
+            const trans = { str: '力量', con: '體質', siz: '體型', dex: '敏捷' };
+            if (isDivine) this.game.addNotice(`神蹟: ${this.name} 的 ${trans[s]} 提升!`, "notice-elder");
+            else this.game.addNotice(`成長: ${this.name} 提升了 ${trans[s]}。`, "");
+        }
+    }
     
     passElderTitle() {
         this.isElder = false;
