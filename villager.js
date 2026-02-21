@@ -50,7 +50,10 @@ export default class Villager {
                 this.con = Math.min(18, this.con + 1);
             } else {
                 this.dex = Math.min(18, this.dex + 1);
-            }
+            } else if (this.gender === "雙性") {
+            // 【雙性天生體弱，大幅扣減體質(血量)與力量(採集)，最低不低於3
+            this.con = Math.max(3, this.con - 3);
+            this.str = Math.max(3, this.str - 2);           
         }
 
         
@@ -127,6 +130,10 @@ export default class Villager {
                     
                     // 【餵哺機制】：如果距離父母夠近，飽食度會自動回升
                     if (Math.hypot(this.x - p.x, this.y - p.y) < 20) {
+                    // 如果是雙性，媽媽有60%的機率拒絕餵食 (只有 40% 機率成功吃到飯)
+                        let feedChance = (this.gender === "雙性" && p.id === this.motherId) ? 0.4 : 1.0;
+                        if (Math.random() < feedChance) {
+                        
                         this.hunger = Math.min(100, this.hunger + 0.015);
                     }
                 } else {
@@ -213,9 +220,16 @@ export default class Villager {
     // 設定雙方的年齡都必須在 18 到 39 歲之間
        if (this.age >= 18 && this.age <= 39 && o.age >= 18 && o.age <= 39) {
        if (r.type === '陌生人' || r.type === '朋友' || r.type === '師生') {
-       let chance = (r.type === '朋友') ? 0.2 : 0.85;
-       if (Math.random() < chance && r.score > 10) {
-       if (this.gender !== o.gender || Math.random() < 0.2) {
+
+    // 雙性與女性不會相戀
+        let canBeLovers = true;
+        if ((this.gender === "雙性" && o.gender === "女") || (this.gender === "女" && o.gender === "雙性")) {
+        canBeLovers = false;
+         }
+        if (canBeLovers) {      
+            let chance = (r.type === '朋友') ? 0.2 : 0.85;
+            if (Math.random() < chance && r.score > 10) {
+            if (this.gender !== o.gender || Math.random() < 0.2) {
        r.type = '戀人'; o.rels[this.id].type = '戀人';
                             }
                         }
@@ -223,30 +237,55 @@ export default class Villager {
                 } else if (r.score > 10 && r.type === '陌生人') {
                     r.type = '朋友'; o.rels[this.id].type = '朋友';
                 }
-                
+
+                // 師生判定
                 if (this.age > 40 && o.age < 18 && !this.game.isDirectLineage(this, o)) {
                     r.type = '師生'; o.rels[this.id].type = '師生';
                 }
-                
-                // 自然繁衍條件
-                if (r.type === '戀人' && this.gender !== o.gender && this.mateCooldown <= 0 && o.mateCooldown <= 0 && this.hunger > 45) {
-                    this.reproduce(o);
-                }
+                                
+                // 繁衍條件與機率
+                if (r.type === '戀人' && this.mateCooldown <= 0 && o.mateCooldown <= 0 && this.hunger > 45) {
+                    // 判斷是否具備繁衍的生理組合 (排除男+男, 女+女)
+                    let canReproduce = false;
+                    if ((this.gender === "女" && o.gender === "男") || (this.gender === "男" && o.gender === "女")) canReproduce = true;
+                    if ((this.gender === "雙性" && o.gender === "男") || (this.gender === "男" && o.gender === "雙性")) canReproduce = true;
+                    if (this.gender === "雙性" && o.gender === "雙性") canReproduce = true;
+
+                    if (canReproduce) {
+                        // 如果有雙性參與，成功率減半 (50%)
+                        let successRate = (this.gender === "雙性" || o.gender === "雙性") ? 0.5 : 1.0;
+                    
+                        if (Math.random() < successRate) {
+                        this.reproduce(o);
+                        } else {
+                            this.mateCooldown = 5000;
+                            o.mateCooldown = 5000;
+                    }
             }
         });
     }
     
     reproduce(partner) {
         this.mateCooldown = 5000; partner.mateCooldown = 5000;
+        
+    // 0.05% 機率生出雙性 (0.0005)，否則男女各半
+        let roll = Math.random();
+        let babyGender = roll < 0.2 ? "雙性" : (roll < 0.50025 ? "男" : "女");
+
+// 解決雙性無法判定父母欄位的問題 (讓雙性固定填入父親欄)
+        let fName = (this.gender === "男" || this.gender === "雙性") ? this.name : partner.name;
+        let mName = (this.gender === "女") ? this.name : partner.name;
+        let fId = (this.gender === "男" || this.gender === "雙性") ? this.id : partner.id;
+        let mId = (this.gender === "女") ? this.id : partner.id;
+
+        
         let baby = new Villager(
             this.game, 
             Math.max(this.gen, partner.gen) + 1, 
-            (Math.random() > 0.5 ? "男" : "女"), 
-            true, this.x, this.y, 
-            (this.gender === "男" ? this.name : partner.name), 
-            (this.gender === "女" ? this.name : partner.name), 
-            (this.gender === "男" ? this.id : partner.id), 
-            (this.gender === "女" ? this.id : partner.id)
+            babyGender, // 使用新的性別變數
+            true, this.x, this.y,
+            fName, mName, fId, mId
+            
         );
         
         this.rels[baby.id] = { score: 100, type: '子女', name: baby.name };
