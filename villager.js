@@ -272,7 +272,7 @@ export default class Villager {
         let roll = Math.random();
         let babyGender = roll < 0.2 ? "雙性" : (roll < 0.50025 ? "男" : "女");
 
-// 解決雙性無法判定父母欄位的問題 (讓雙性固定填入父親欄)
+    // 解決雙性無法判定父母欄位的問題 (讓雙性固定填入父親欄)
         let fName = (this.gender === "男" || this.gender === "雙性") ? this.name : partner.name;
         let mName = (this.gender === "女") ? this.name : partner.name;
         let fId = (this.gender === "男" || this.gender === "雙性") ? this.id : partner.id;
@@ -343,8 +343,13 @@ export default class Villager {
             ctx.beginPath(); ctx.arc(this.x, this.y, r + 9, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
         }
         
-        ctx.fillStyle = (this.plagueTimer > 0) ? "#4a148c" : ((this.action === "睡眠") ? "#666" : (this.gender === "男" ? "#3498db" : "#e84393"));
+        // 畫出村民本體圓形
+        ctx.fillStyle = (this.plagueTimer > 0) ? "#4a148c" : 
+                        ((this.action === "睡眠") ? "#666" : 
+                        (this.gender === "男" ? "#3498db" : 
+                        (this.gender === "女" ? "#e84393" : "#9b59b6"))); // 雙性顯示為紫色
         ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI * 2); ctx.fill();
+        
         ctx.fillStyle = "white"; ctx.font = "10px Arial";
         ctx.fillText((this.isElder ? "👑 " : "") + this.name, this.x - 10, this.y - r - 5);
     }
