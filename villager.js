@@ -151,7 +151,7 @@ export default class Villager {
         
         if (this.hunger <= 0) this.hp -= 0.04;
         if (this.age > 85) this.hp = 0;
-        
+       // 死亡判定 
         if (this.hp <= 0) {
             this.hp = 0; this.game.deathCount++;
             this.game.addNotice(`${this.isElder ? "長老" : "村民"} ${this.name} 離世。`, "notice-death");
