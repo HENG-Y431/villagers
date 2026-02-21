@@ -154,6 +154,9 @@ if (this.age < 13) {
             this.game.addNotice(`繼承! ${p[0].name} 成為新長老。`, "notice-elder");
         }
     }
+
+
+    // 社交關係設定 
     
     socialCycle() {
         this.game.villagers.forEach(o => {
@@ -164,13 +167,31 @@ if (this.age < 13) {
                 let r = this.rels[o.id];
                 r.score += 0.8; o.rels[this.id].score += 0.8;
 
-                // 設定雙方的年齡都必須在 18 到 39 歲之間
-                if (this.age >= 18 && this.age <= 39 && o.age >= 18 && o.age <= 39) {
-                    if (r.type === '陌生人' || r.type === '朋友' || r.type === '師生') {
-                        let chance = (r.type === '朋友') ? 0.2 : 0.85;
-                        if (Math.random() < chance && r.score > 10) {
-                            if (this.gender !== o.gender || Math.random() < 0.2) {
-                                r.type = '戀人'; o.rels[this.id].type = '戀人';
+
+     // 摯友設定 確認
+        let iHavePartner = Object.values(this.rels).some(rel => rel.type === '夥伴');
+        let youHavePartner = Object.values(o.rels).some(rel => rel.type === '夥伴');
+
+    // 原本是朋友，且「雙方都還沒有夥伴」
+       if (r.type === '朋友' && r.score > 80 && !iHavePartner && !youHavePartner) {
+    
+    // 每次互動有 5% 的機率覺醒為唯一摯友
+        if (Math.random() < 0.05) {
+        r.type = '夥伴';
+        o.rels[this.id].type = '夥伴';
+        
+    // 發送全域廣播，見證唯一羈絆
+        this.game.addNotice(`⭐ 羈絆：${this.name} 與 ${o.name} 結為了一生的唯一摯友！`, "notice-hero");
+    }
+}           
+         
+    // 設定雙方的年齡都必須在 18 到 39 歲之間
+       if (this.age >= 18 && this.age <= 39 && o.age >= 18 && o.age <= 39) {
+       if (r.type === '陌生人' || r.type === '朋友' || r.type === '師生') {
+       let chance = (r.type === '朋友') ? 0.2 : 0.85;
+       if (Math.random() < chance && r.score > 10) {
+       if (this.gender !== o.gender || Math.random() < 0.2) {
+       r.type = '戀人'; o.rels[this.id].type = '戀人';
                             }
                         }
                     }
