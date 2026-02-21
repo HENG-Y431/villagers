@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Underworld V10.2 - 最終修復版</title>
+    <title>Underworld V11.0 - 全能最終版</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,14 +21,14 @@
         <div class="grace-header">✨ 神恩儲備</div>
         <div id="grace-points">200</div>
         <hr style="border:0; border-top:1px solid #444; margin:8px 0;">
-        <div id="pop-stats" style="font-size:0.75em; color:#ffd700;">人口：載入中...</div>
+        <div id="pop-stats" style="font-size:0.75em; color:#ffd700;">載入中...</div>
     </div>
     <h3 class="panel-title">神權干預</h3>
     <div class="btn-grid">
         <div class="btn-wrap"><button onclick="castMiracle('food')">聖餐投放</button></div>
         <div class="btn-wrap"><button onclick="castMiracle('energy')">單體治癒</button></div>
-        <div class="btn-wrap"><button style="color:#ff69b4;" onclick="castLoveMiracle()">神聖紅線</button></div>
-        <div class="btn-wrap"><button style="color:#888;" onclick="castPlague()">天罰瘟疫</button></div>
+        <div class="btn-wrap"><button style="color:#ff69b4;" onclick="castLoveMiracle()">神降紅線</button></div>
+        <div class="btn-wrap"><button style="color:#888;" onclick="castPlague()">天罰災厄</button></div>
     </div>
     <div id="status-window">
         <strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong>
@@ -36,16 +36,13 @@
         <div id="v-personality" style="color: #00ff00; font-size: 0.75em; margin: 5px 0;">載入中</div>
         <div class="lineage-text">父：<span id="v-father"></span> | 母：<span id="v-mother"></span></div>
         <div id="v-social-box"></div>
-        <div class="attr-grid">
-            <div id="attr-str"></div><div id="attr-con"></div>
-            <div id="attr-siz"></div><div id="attr-dex"></div>
-        </div>
+        <div class="attr-grid"><div id="attr-str"></div><div id="attr-con"></div><div id="attr-siz"></div><div id="attr-dex"></div></div>
         <div class="status-bar-group">
-            天命<div class="bar"><div id="v-health" class="bar-fill" style="background: #e74c3c;"></div></div>
-            飽食<div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div>
+            天命 (health)<div class="bar"><div id="v-health" class="bar-fill" style="background: #e74c3c;"></div></div>
+            飽食 (food)<div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div>
         </div>
     </div>
-    <button onclick="resetWorld()" style="width:100%; margin-top:15px; font-size:0.7em; background:none; border:1px solid #333; color:#555; cursor:pointer;">文明歸零</button>
+    <button onclick="resetWorld()" style="width:100%; margin-top:15px; font-size:0.7em; background:none; border:1px solid #333; color:#555; cursor:pointer;">歸零重啟</button>
 </div>
 <script src="config.js"></script>
 <script src="villager.js"></script>
