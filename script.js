@@ -62,6 +62,15 @@ class World {
     const dtMin = this.minutesPerTick;
     this.totalMin += dtMin;
 
+    // 每年加點：Year 變化時計算（倍速也不會重複加）
+const { year } = formatTime(this.totalMin);
+if (year > this.lastAwardYear) {
+  const yearsPassed = year - this.lastAwardYear;
+  this.gracePoints += yearsPassed * CFG.gracePerYear;
+  this.lastAwardYear = year;
+  this.chronicle.add(`Grace +${yearsPassed * CFG.gracePerYear} (yearly).`);
+}
+
     // 1) 生存
     for (const v of this.villagers) {
       if (!v.alive) continue;
