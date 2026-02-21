@@ -254,11 +254,12 @@ export default class Villager {
                         } else {
                             this.mateCooldown = 5000;
                             o.mateCooldown = 5000;
+                        }
                     }
+                }
             }
         });
     }
-    
     reproduce(partner) {
         this.mateCooldown = 5000; partner.mateCooldown = 5000;
         
