@@ -34,6 +34,12 @@ class Villager {
         this.plagueTimer = 0; this.angle = Math.random()*Math.PI*2;
     }
 
+    passElderTitle() {
+    this.isElder = false;
+    let p = villagers.filter(v => v.hp > 0 && v.age >= 18 && !v.isElder).sort((a,b)=>b.age - a.age);
+    if(p.length > 0) p[0].isElder = true; // 找最年長者繼承
+}
+
     getSerial(gen, gender) {
         if (!genCounters[gen]) genCounters[gen] = { m: 1, f: 2 };
         let s = (gender === "男") ? genCounters[gen].m : genCounters[gen].f;
@@ -95,6 +101,15 @@ class Villager {
         updateGrace(baby.isHero ? 150 : 10);
         syncBottomBar();
     }
+
+    if(this.age < 13) {
+    let p = villagers.find(v => v.id === this.motherId && v.hp > 0) || villagers.find(v => v.id === this.fatherId && v.hp > 0);
+    if(p) {
+        this.angle = Math.atan2(p.y - this.y, p.x - this.x); 
+        this.move(0.45); // 跟隨父母
+        if(Math.hypot(this.x - p.x, this.y - p.y) < 20) this.hunger = Math.min(100, this.hunger + 0.015); // 靠近時飽食度增加
+    }
+}
 
     findRes() {
         let t = environment.find(e => e.type !== 'grass' && Math.abs(e.x-this.x)<40 && Math.abs(e.y-this.y)<40);
