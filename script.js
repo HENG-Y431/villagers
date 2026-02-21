@@ -17,11 +17,15 @@ const GameState = {
     
     // 供 Villager 呼叫的方法
     getSerial: function(gen, gender) {
-        if (!this.genCounters[gen]) this.genCounters[gen] = { m: 1, f: 2 };
-        let s = (gender === "男") ? this.genCounters[gen].m : this.genCounters[gen].f;
-        if (gender === "男") this.genCounters[gen].m += 2; else this.genCounters[gen].f += 2;
+        if (!this.genCounters[gen]) this.genCounters[gen] = { m: 1, f: 2, x: 3 };
+        let s = (gender === "男") ? this.genCounters[gen].m : ((gender === "女") ? this.genCounters[gen].f : this.genCounters[gen].x);
+        
+        if (gender === "男") this.genCounters[gen].m += 3; 
+        else if (gender === "女") this.genCounters[gen].f += 3;
+        else this.genCounters[gen].x += 3;
         return s.toString().padStart(2, '0');
     },
+    
     addNotice: function(msg, typeClass = "") {
         const board = document.getElementById('notice-board');
         let yrs = Math.floor(this.totalMinutes / CONFIG.MINS_IN_YEAR) + 1;
@@ -110,7 +114,11 @@ function syncBottomBar() {
     bottomBar.innerHTML = "";
     aliveV.filter(v => currentTab == 'All' || v.gen == currentTab).forEach(v => {
         let btn = document.createElement('div');
-        let classes = `v-btn ${v.gender === "男" ? "male" : "female"}`;
+        let classes = `v-btn`;
+        if (v.gender === "男") classes += " male";
+        else if (v.gender === "女") classes += " female";
+        else classes += " intersex";
+        
         if (selectedId === v.id) classes += " selected";
         if (matchmakingTarget && matchmakingTarget.id === v.id) classes += " match-target";
         btn.className = classes;
@@ -232,7 +240,7 @@ function loop() {
     document.getElementById('world-time').innerText = `第${yrs}年${mths}月 | ${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
     
     let aliveV = GameState.villagers.filter(v => v.hp > 0);
-    document.getElementById('pop-stats').innerText = `人口:${aliveV.length} (男:${aliveV.filter(v => v.gender == "男").length} | 女:${aliveV.filter(v => v.gender == "女").length})`;
+    document.getElementById('pop-stats').innerText = `人口:${aliveV.length} (男:${aliveV.filter(v => v.gender == "男").length} | 女:${aliveV.filter(v => v.gender == "女").length} | 雙性:${aliveV.filter(v => v.gender == "雙性").length})`;
     document.getElementById('death-stats').innerText = `累積死亡:${GameState.deathCount}`;
     
     // 繪製村民 (傳入 selectedId 與 matchmakingTargetId 以繪製不同光環)
