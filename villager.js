@@ -146,11 +146,17 @@ export default class Villager {
                 // 滿獨立年齡後，開始自己探索世界
                 this.action = "探索"; 
                 this.move(this.personality === "積極" ? 0.6 : 0.4);
-             }
-             }
-        
+
+         // 嚴重飢餓扣血
         if (this.hunger <= 0) this.hp -= 0.04;
-        if (this.age > 85) this.hp = 0;
+
+        // 時間流逝、老化與冷卻時間 (🌟 這個剛剛被刪掉了，已經幫您補回)
+        if (typeof CONFIG !== 'undefined' && CONFIG.MINS_IN_YEAR) {
+            this.age += 1 / CONFIG.MINS_IN_YEAR;
+        }
+        if (this.mateCooldown > 0) this.mateCooldown--;
+        if (this.age > 85 && Math.random() < 0.001) this.hp = 0;
+                    
        // 死亡判定 
         if (this.hp <= 0) {
             this.hp = 0; this.game.deathCount++;
