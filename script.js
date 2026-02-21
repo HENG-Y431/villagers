@@ -156,8 +156,8 @@ if (year > this.lastAwardYear) {
     }
 
     const dex = v.stats.DEX;
-    const speed = clamp(16 + (dex - 10) * 1.1, 10, 28);
-    const step = speed * (dtMin / 2);
+    const speed = clamp(10 + (dex - 10) * 0.6, 6, 14);
+const step = speed;
 
     const dx = tx - v.x, dy = ty - v.y;
     const d = Math.hypot(dx, dy) || 1;
@@ -403,25 +403,66 @@ function renderUI() {
         return `${n}: ${r.state} (${r.score.toFixed(0)})`;
       });
 
-    selectedCard.innerHTML = `
-      <div class="row" style="align-items:flex-start;">
-        <div>
-          <div style="font-weight:800; font-size:16px;">${sel.name} <span class="muted">(${sel.sex})</span></div>
-          <div class="muted">Age ${sel.age.toFixed(1)} • Hunger ${(sel.hunger*100).toFixed(0)}% • HP ${(sel.hp*100).toFixed(0)}%</div>
-        </div>
-        <div class="muted">Grace ${world.gracePoints}</div>
+    selectedCard.innerHTML = 
+    const sel = world.getSelected();
+if (!sel) {
+  selectedCard.style.display = "none";
+} else {
+  selectedCard.style.display = "block";
+
+  // 由全體資料反查：孩子、戀人、父母
+  const children = world.villagers
+    .filter(v => v.alive && (v.motherId === sel.id || v.fatherId === sel.id))
+    .map(v => v.name);
+
+  const lovers = [...sel.relations.entries()]
+    .filter(([_, r]) => r.state === "Lover")
+    .map(([oid]) => world.villagers.find(v => v.id === oid && v.alive)?.name)
+    .filter(Boolean);
+
+  const mom = sel.motherId ? (world.villagers.find(v => v.id === sel.motherId)?.name ?? "未知") : "無";
+  const dad = sel.fatherId ? (world.villagers.find(v => v.id === sel.fatherId)?.name ?? "未知") : "無";
+
+  const role = children.length ? "部落長老" : "村民";
+
+  const chip = (text) => `<span style="display:inline-block;border:1px solid #23314d;background:#0b1220;padding:6px 8px;border-radius:999px;font-size:12px;margin:2px 4px 2px 0;">${text}</span>`;
+
+  selectedCard.innerHTML = `
+    <div style="font-weight:900;font-size:18px;">${sel.name} <span class="muted" style="float:right;">${sel.age.toFixed(0)}歲</span></div>
+    <div class="muted" style="margin-top:4px;">✨ ${role}</div>
+    <div class="muted" style="margin-top:4px;">父：${dad}　母：${mom}</div>
+
+    <hr style="border:none;border-top:1px solid #23314d;margin:10px 0;">
+
+    <div style="font-weight:800;">❤️ 戀人</div>
+    <div style="margin-top:6px;">${lovers.length ? lovers.map(chip).join("") : `<span class="muted">無</span>`}</div>
+
+    <div style="margin-top:10px;font-weight:800;">👶 家族</div>
+    <div style="margin-top:6px;">${children.length ? children.map(chip).join("") : `<span class="muted">無</span>`}</div>
+
+    <hr style="border:none;border-top:1px solid #23314d;margin:10px 0;">
+
+    <div class="row"><div>STR：${sel.stats.STR}</div><div>CON：${sel.stats.CON}</div></div>
+    <div class="row"><div>SIZ：${sel.stats.SIZ}</div><div>DEX：${sel.stats.DEX}</div></div>
+
+    <div style="margin-top:10px;">
+      <div class="muted">天命 (HP)</div>
+      <div style="height:10px;background:rgba(255,255,255,.15);border-radius:999px;overflow:hidden;">
+        <div style="height:10px;width:${(sel.hp*100).toFixed(0)}%;background:#ff4d4d;"></div>
       </div>
-      <div style="margin-top:8px;">
-        <div class="muted">Stats</div>
-        <div class="row"><div>STR ${sel.stats.STR} <span class="muted">(${cocLabel(sel.stats.STR)})</span></div><div>DEX ${sel.stats.DEX} <span class="muted">(${cocLabel(sel.stats.DEX)})</span></div></div>
-        <div class="row"><div>CON ${sel.stats.CON} <span class="muted">(${cocLabel(sel.stats.CON)})</span></div><div>SIZ ${sel.stats.SIZ} <span class="muted">(${cocLabel(sel.stats.SIZ)})</span></div></div>
+      <div class="muted" style="text-align:right;">${(sel.hp*100).toFixed(0)}%</div>
+    </div>
+
+    <div style="margin-top:8px;">
+      <div class="muted">飽食 (Food)</div>
+      <div style="height:10px;background:rgba(255,255,255,.15);border-radius:999px;overflow:hidden;">
+        <div style="height:10px;width:${(sel.hunger*100).toFixed(0)}%;background:#f59e0b;"></div>
       </div>
-      <div style="margin-top:10px;">
-        <div class="muted">Top Relations</div>
-        <div style="font-size:12px; line-height:1.6;">${rels.length ? rels.join("<br/>") : "<span class='muted'>None</span>"}</div>
-      </div>
-    `;
-  }
+      <div class="muted" style="text-align:right;">${(sel.hunger*100).toFixed(0)}%</div>
+    </div>
+  `;
+}
+
 
   logEl.innerHTML = world.chronicle.items.map(x => `<div>${x.text}</div>`).join("");
   logCount.textContent = `${world.chronicle.items.length}`;
