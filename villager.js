@@ -187,10 +187,13 @@ if (this.age < 13) {
                 r.score += 0.8; o.rels[this.id].score += 0.8;
 
 
-     // 摯友設定 確認
+     // 摯友設定 1.確認
         let iHavePartner = Object.values(this.rels).some(rel => rel.type === '夥伴');
         let youHavePartner = Object.values(o.rels).some(rel => rel.type === '夥伴');
 
+    // 雙方都必須滿 15 歲（擁有獨立思考與社交能力後），才能結交一生摯友
+        if (this.age >= 15 && o.age >= 15) {
+                
     // 原本是朋友，且「雙方都還沒有夥伴」
        if (r.type === '朋友' && r.score > 80 && !iHavePartner && !youHavePartner) {
     
