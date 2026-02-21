@@ -232,7 +232,7 @@ if (this.age < 13) {
                     this.reproduce(o);
                 }
             }
-        });
+        };
     }
     
     reproduce(partner) {
