@@ -146,7 +146,8 @@ export default class Villager {
                 // 滿獨立年齡後，開始自己探索世界
                 this.action = "探索"; 
                 this.move(this.personality === "積極" ? 0.6 : 0.4);
-            }
+             }
+             }
         
         if (this.hunger <= 0) this.hp -= 0.04;
         if (this.age > 85) this.hp = 0;
