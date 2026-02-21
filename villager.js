@@ -177,10 +177,11 @@ export default class Villager {
 
 
     // 社交關係設定 
-    
     socialCycle() {
         this.game.villagers.forEach(o => {
             if (o === this || o.hp <= 0) return;
+            
+            // 距離判定開啟
             if (Math.hypot(this.x - o.x, this.y - o.y) < CONFIG.SOCIAL_RANGE) {
                 
                 // 關係判定的基礎
@@ -189,42 +190,39 @@ export default class Villager {
                 let r = this.rels[o.id];
                 r.score += 0.8; o.rels[this.id].score += 0.8;
 
+                // 摯友設定 1.確認
+                let iHavePartner = Object.values(this.rels).some(rel => rel.type === '摯友');
+                let youHavePartner = Object.values(o.rels).some(rel => rel.type === '摯友');
 
-     // 摯友設定 1.確認
-        let iHavePartner = Object.values(this.rels).some(rel => rel.type === '摯友');
-        let youHavePartner = Object.values(o.rels).some(rel => rel.type === '摯友');
-
-    // 雙方都必須滿 15 歲（擁有獨立思考與社交能力後），才能結交一生摯友
-        if (this.age >= 15 && o.age >= 15) {
-                
-    // 原本是朋友，且「雙方都還沒有摯友」
-       if (r.type === '朋友' && r.score > 80 && !iHavePartner && !youHavePartner) {
-    
-    // 每次互動有 5% 的機率覺醒為唯一摯友
-        if (Math.random() < 0.05) {
-        r.type = '摯友';
-        o.rels[this.id].type = '摯友';
-        
-    // 發送全域廣播，見證唯一羈絆
-        this.game.addNotice(`⭐ 羈絆：${this.name} 與 ${o.name} 結為了一生的唯一摯友！`, "notice-hero");
-    }
-}           
-}           
-         
-    // 設定雙方的年齡都必須在 18 到 39 歲之間
-       if (this.age >= 18 && this.age <= 39 && o.age >= 18 && o.age <= 39) {
-       if (r.type === '陌生人' || r.type === '朋友' || r.type === '師生') {
-
-    // 雙性與女性不會相戀
-        let canBeLovers = true;
-        if ((this.gender === "雙性" && o.gender === "女") || (this.gender === "女" && o.gender === "雙性")) {
-        canBeLovers = false;
-         }
-        if (canBeLovers) {      
-            let chance = (r.type === '朋友') ? 0.2 : 0.85;
-            if (Math.random() < chance && r.score > 10) {
-            if (this.gender !== o.gender || Math.random() < 0.2) {
-       r.type = '戀人'; o.rels[this.id].type = '戀人';
+                // 雙方都必須滿 15 歲（擁有獨立思考與社交能力後），才能結交一生摯友
+                if (this.age >= 15 && o.age >= 15) {
+                    // 原本是朋友，且「雙方都還沒有摯友」
+                    if (r.type === '朋友' && r.score > 80 && !iHavePartner && !youHavePartner) {
+                        // 每次互動有 5% 的機率覺醒為唯一摯友
+                        if (Math.random() < 0.05) {
+                            r.type = '摯友';
+                            o.rels[this.id].type = '摯友';
+                            // 發送全域廣播，見證唯一羈絆
+                            this.game.addNotice(`⭐ 羈絆：${this.name} 與 ${o.name} 結為了一生的唯一摯友！`, "notice-hero");
+                        }
+                    }
+                }
+                 
+                // 設定雙方的年齡都必須在 18 到 39 歲之間
+                if (this.age >= 18 && this.age <= 39 && o.age >= 18 && o.age <= 39) {
+                    if (r.type === '陌生人' || r.type === '朋友' || r.type === '師生') {
+                        // 雙性與女性不會相戀
+                        let canBeLovers = true;
+                        if ((this.gender === "雙性" && o.gender === "女") || (this.gender === "女" && o.gender === "雙性")) {
+                            canBeLovers = false;
+                        }
+                        
+                        if (canBeLovers) {      
+                            let chance = (r.type === '朋友') ? 0.2 : 0.85;
+                            if (Math.random() < chance && r.score > 10) {
+                                if (this.gender !== o.gender || Math.random() < 0.2) {
+                                    r.type = '戀人'; o.rels[this.id].type = '戀人';
+                                }
                             }
                         }
                     }
@@ -250,16 +248,17 @@ export default class Villager {
                         let successRate = (this.gender === "雙性" || o.gender === "雙性") ? 0.5 : 1.0;
                     
                         if (Math.random() < successRate) {
-                        this.reproduce(o);
+                            this.reproduce(o);
                         } else {
                             this.mateCooldown = 5000;
                             o.mateCooldown = 5000;
                         }
                     }
-                }
-            }
-        });
+                } 
+            } 
+        }); 
     }
+    
     reproduce(partner) {
         this.mateCooldown = 5000; partner.mateCooldown = 5000;
         
