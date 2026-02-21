@@ -181,6 +181,8 @@ if (this.age < 13) {
         this.game.villagers.forEach(o => {
             if (o === this || o.hp <= 0) return;
             if (Math.hypot(this.x - o.x, this.y - o.y) < CONFIG.SOCIAL_RANGE) {
+                
+                // 關係判定的基礎
                 if (!this.rels[o.id]) this.rels[o.id] = { score: 0, type: '陌生人', name: o.name };
                 if (!o.rels[this.id]) o.rels[this.id] = { score: 0, type: '陌生人', name: this.name };
                 let r = this.rels[o.id];
@@ -188,19 +190,19 @@ if (this.age < 13) {
 
 
      // 摯友設定 1.確認
-        let iHavePartner = Object.values(this.rels).some(rel => rel.type === '夥伴');
-        let youHavePartner = Object.values(o.rels).some(rel => rel.type === '夥伴');
+        let iHavePartner = Object.values(this.rels).some(rel => rel.type === '摯友');
+        let youHavePartner = Object.values(o.rels).some(rel => rel.type === '摯友');
 
     // 雙方都必須滿 15 歲（擁有獨立思考與社交能力後），才能結交一生摯友
         if (this.age >= 15 && o.age >= 15) {
                 
-    // 原本是朋友，且「雙方都還沒有夥伴」
+    // 原本是朋友，且「雙方都還沒有摯友」
        if (r.type === '朋友' && r.score > 80 && !iHavePartner && !youHavePartner) {
     
     // 每次互動有 5% 的機率覺醒為唯一摯友
         if (Math.random() < 0.05) {
-        r.type = '夥伴';
-        o.rels[this.id].type = '夥伴';
+        r.type = '摯友';
+        o.rels[this.id].type = '摯友';
         
     // 發送全域廣播，見證唯一羈絆
         this.game.addNotice(`⭐ 羈絆：${this.name} 與 ${o.name} 結為了一生的唯一摯友！`, "notice-hero");
