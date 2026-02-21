@@ -12,10 +12,14 @@ export const CFG = Object.freeze({
   MIN_PER_DAY: 24 * 60,
   DAYS_PER_YEAR: 360,
 
-gracePerYear: 5,
-gracePerBirth: 10,
-gracePerExcellentBirth: 20,
-excellentStatThreshold: 16,   // 單項 >=16 視為亮眼
+MAP_COLS: 40,
+MAP_ROWS: 24,
+TILE: 32,
+  
+ gracePerYear: 5,
+ gracePerBirth: 10,
+ gracePerExcellentBirth: 20,
+ excellentStatThreshold: 16,   // 單項 >=16 視為亮眼
 excellentSumThreshold: 60,    // 或總和 >=60 視為優秀
 
   // 倍速檔位（每 tick 增加多少「世界分鐘」）
