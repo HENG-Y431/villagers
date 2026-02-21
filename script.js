@@ -81,6 +81,10 @@ function initWorld() {
     for (let i = 0; i < 4; i++) {
         let v = new Villager(GameState, 1, (i < 2 ? "男" : "女"), false, null, null, "無", "無", null, null, 20);
         v.isElder = true; 
+
+    // 強制給予約一年的繁衍冷卻期 (約 2000 幀)
+        v.mateCooldown = 2000;
+        
         GameState.villagers.push(v);
     }
     GameState.addNotice("文明起源:始祖長老 降臨。", "notice-elder");
