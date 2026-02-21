@@ -209,7 +209,8 @@ export default class Villager {
     }
     
     draw(ctx, isSelected, isMatchTarget) {
-        if (this.hp <= 0) { ctx.fillStyle = "#333"; ctx.fillRect(this.x - 5, this.y - 5, 10, 10); return; }
+        if (this.hp <= 0) return;
+        
         let r = (this.age < 18) ? 6 : (10 + this.siz / 2.5);
         
         if (this.isHero) {
