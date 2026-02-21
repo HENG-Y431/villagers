@@ -1,68 +1,68 @@
-<!doctype html>
-<html lang="zh-Hant">
+<!DOCTYPE html>
+<html lang="zh-TW">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>V1.2 Village Sandbox (ESM)</title>
-  <link rel="stylesheet" href="./style.css" />
+    <meta charset="UTF-8">
+    <title>Underworld V9.0 - 神權紅線與點數系統 (ESM版)</title>
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div class="wrap">
-    <canvas id="c" width="1200" height="800"></canvas>
-
-    <aside class="side">
-      <header class="topbar">
-        <div class="pill" id="timePill">Year 0 • Day 0</div>
-        <div class="pill" id="popPill">Pop 0</div>
-        <div class="pill">Speed <span id="speedText">1x</span></div>
-      </header>
-
-      <main class="panel">
-        <section class="card">
-          <div class="row">
-            <div>
-              <div class="title">God Panel</div>
-              <div class="muted">ES Modules + 拆檔</div>
+    <div id="top-bar">
+        <span>世界時間: <span id="world-time">秩序校準中...</span></span>
+        <span style="margin-left: 20px; color: #daa520;">✨ 神權點數: <span id="divine-points" style="font-size: 1.2em; font-weight: bold; color: #fff;">0</span></span>
+    </div>
+    
+    <div id="game-container">
+        <canvas id="worldCanvas"></canvas>
+        <div id="admin-footer">
+            <div id="footer-left">
+                <div id="gen-tabs"></div>
+                <div id="bottom-bar"></div>
             </div>
-            <button id="spawnBtn">+ Spawn</button>
-          </div>
+            <div id="notice-board"></div>
+        </div>
+    </div>
+    
+    <div id="god-panel">
+        <h3>部落人口普查</h3>
+        <div class="stat-card">
+            <div id="pop-stats">人口:0(男:0 | 女:0)</div>
+            <div id="death-stats" style="color: #ff4d4d; margin-top: 5px;">累積死亡:0</div>
+        </div>
+        
+        <h3>神權干預 <span style="font-size: 0.7em; color: #aaa;">(消耗點數)</span></h3>
+        <div class="btn-grid">
+            <div class="btn-wrap"><button id="btn-food">投放聖餐 (10)</button></div>
+            <div class="btn-wrap"><button id="btn-heal">神聖治癒 (15)</button></div>
+            <div class="btn-wrap"><button id="btn-plague" style="color:#ff4d4d;">天罰災厄 (20)</button></div>
+            <div class="btn-wrap"><button id="btn-matchmake" style="color:#ff69b4; border-color: #ff69b4;">神聖紅線 (30)</button><span class="btn-desc" id="match-status">點擊啟動</span></div>
+        </div>
 
-          <div class="controls">
-            <button id="mealBtn">投放聖餐</button>
-            <button id="healBtn">神聖治癒</button>
+        <div id="status-window">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong id="v-name" style="color: #daa520; font-size: 1.1em;">編號</strong>
+                <span id="v-age" style="color: #4caf50;">0 歲</span>
+            </div>
+            <div id="v-elder-tag" style="color: #ffd700; font-size: 0.85em; font-weight: bold; margin-bottom: 2px; display: none;">👑 部落長老</div>
+            <div id="v-personality" style="color: #00ff00; font-size: 0.8em; font-weight: bold; margin: 2px 0;"> 性格:載入中</div>
+            <div style="font-size:0.75em; color:#888; border-bottom:1px solid #333; padding-bottom:4px;"> 
+                父:<span id="v-father">無</span> | 母:<span id="v-mother">無</span>
+            </div>
+            <div id="v-social-box"></div>
+            <div class="attr-grid">
+                <span id="attr-str"></span> <span id="attr-con"></span>
+                <span id="attr-siz"></span> <span id="attr-dex"></span>
+            </div>
+            <div style="margin-top:8px;">
+                <div style="display: flex; justify-content:space-between; font-size:0.7em; color:#999;"><span>天命 (HP)</span><span id="hp-txt">100%</span></div>
+                <div class="bar"><div id="v-health" class="bar-fill" style="background: #e74c3c;"></div></div>
+            </div>
+            <div style="margin-top:6px;">
+                <div style="display: flex; justify-content:space-between; font-size:0.7em; color:#999;"><span>飽食 (Food)</span><span id="fd-txt">100%</span></div>
+                <div class="bar"><div id="v-hunger" class="bar-fill" style="background: #f39c12;"></div></div>
+            </div>
+        </div>
+    </div>
 
-            <label class="muted inline">
-              Seed <input id="seedInput" value="12345" />
-            </label>
-            <button id="resetBtn">重啟文明</button>
-          </div>
-
-          <div class="controls">
-            <button id="slowerBtn">-</button>
-            <button id="fasterBtn">+</button>
-            <div class="muted">用本機 server 跑（VS Code Live Server 最方便）</div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="title">Villagers</div>
-          <div class="list" id="villagerList"></div>
-        </section>
-
-        <section class="card" id="selectedCard" style="display:none;"></section>
-
-        <section class="card">
-          <div class="row">
-            <div class="title">Chronicle</div>
-            <div class="muted" id="logCount">0</div>
-          </div>
-          <div class="log" id="log"></div>
-        </section>
-      </main>
-    </aside>
-  </div>
-
-  <!-- 入口：ES Module -->
-  <script type="module" src="./script.js"></script>
+    <script type="module" src="./script.js"></script>
 </body>
 </html>
