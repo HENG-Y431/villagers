@@ -83,6 +83,21 @@ if (year > this.lastAwardYear) {
         this.chronicle.add(`${v.name} died.`);
         for (const u of this.villagers) u.relations.delete(v.id);
       }
+
+    // 優秀小孩加點
+    isExcellentBaby(baby) {
+  const s = baby.stats;
+  const sum = s.STR + s.CON + s.SIZ + s.DEX;
+
+  const brightCount =
+    (s.STR >= CFG.excellentStatThreshold) +
+    (s.CON >= CFG.excellentStatThreshold) +
+    (s.SIZ >= CFG.excellentStatThreshold) +
+    (s.DEX >= CFG.excellentStatThreshold);
+
+  return (sum >= CFG.excellentSumThreshold) || (brightCount >= 2);
+}
+    
     }
 
     // 2) 行為切換 + 移動 + 吃
